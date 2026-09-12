@@ -97,71 +97,259 @@ function overwriteInitialGlobalValues() {
     d3.select("#zoomed").classed("hidden", false);
     d3.select("#viewer3d").classed("hidden", true);
 }
+var _googleReturnObj = {
 
-function getUrlVars(rawUrl) {
-    var vars = {};
-    var parts = rawUrl.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
-        vars[key] = value;
-    });
-    return vars;
+    csvFiles: {},
+
+    imgFiles: {},
+
+    jsonFiles: {},
+
+    settingFiles: {}
+
+};
+function getGFolderID(link) {
+
+    var m = String(link || "")
+        .match(/\/folders\/([a-zA-Z0-9_-]+)/);
+
+    if (m) {
+        return m[1];
+    }
+
+    m = String(link || "")
+        .match(/[?&]id=([a-zA-Z0-9_-]+)/);
+
+    if (m) {
+        return m[1];
+    }
+
+    if (
+        /^[a-zA-Z0-9_-]{20,}$/.test(
+            String(link || "")
+        )
+    ) {
+        return link;
+    }
+
+    return "";
 }
 
+
+function checkInputLink(link, callback) {
+
+    var folderLinkObj = {
+
+        "DE_PW": "",
+
+        "inLink": link,
+
+        "url": "",
+
+        "type": ""
+
+    };
+
+
+    // GOOGLE DRIVE
+    if (
+        String(link).indexOf(
+            "drive.google.com"
+        ) !== -1
+        ||
+        /^[a-zA-Z0-9_-]{20,}$/.test(
+            String(link || "")
+        )
+    ) {
+
+        var folderId =
+            getGFolderID(link);
+
+
+        if (!folderId) {
+
+            alert(
+                "Could not read the Google Drive folder ID."
+            );
+
+            return;
+        }
+
+
+        folderLinkObj.folderId =
+            folderId;
+
+
+        folderLinkObj.url =
+            GOOGLE_DRIVE_PROXY +
+            "?folderId=" +
+            encodeURIComponent(folderId);
+
+
+        folderLinkObj.type =
+            "GoogleDrive";
+
+
+    }
+
+    // SERVER LINK
+    else {
+
+        if (link.slice(-1) !== "/") {
+            link += "/";
+        }
+
+        folderLinkObj.url = link;
+
+        folderLinkObj.type =
+            "userServerLink";
+    }
+
+
+    callback(folderLinkObj);
+}
 var Gkey = "AIzaSyCSrF08UMawxKIb0m4JsA1mYE5NMmP36bY";
 var BitlyKey = "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
+var GOOGLE_DRIVE_PROXY = https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec
 
 function prepareGFolder(folderLink) {
 
-    googleReturnObj ={ //{"fileName":Google Drive ID}
-        csvFiles:{},
-        imgFiles:{},
-        jsonFiles:{},
-        settingFiles:{}
+    googleReturnObj = {
+
+        csvFiles: {},
+
+        imgFiles: {},
+
+        jsonFiles: {},
+
+        settingFiles: {}
+
     };
 
-    var folder = {
-        "DE_PW":"", // short code from google or base64 coded inLink
-        "inLink":"", //raw url
-        "url": "",  //url to load the list item inside the folder
-        "type": "" //folder type : GoogleDrive, OneDrive, or userServerLink
-    }
-    //_folderInfo = folderLink;
 
-    folder = folderLink;
+    d3.json(
+        folderLink.url,
+        function(data) {
 
-    d3.json(folder.url, function (data) {
-        var csvFiles = {};
-        var imgFiles ={};
-        var jsonFiles ={};
-        var settingFiles ={};
 
-        if (folder.type=== "GoogleDrive") { //this is google returned obj
-            data.files.forEach(function (item) {
-                var GLink = "";
-                //googleReturnObj[item.name]=item.id
+            if (!data || data.error) {
 
-                if(item.mimeType === "text/csv"){
-                    GLink = "https://www.googleapis.com/drive/v3/files/" + item.id + "?alt=media&key=" + Gkey;
-                    //this item is a data csv file
-                    csvFiles[item.name] = GLink;
-                    
-                }else if(item.mimeType.startsWith("image")){
-                    GLink = "https://drive.google.com/thumbnail?id=" + item.id +"&sz=w1000";
-                    //this item is a image file
-                    imgFiles[item.name] = GLink;
+                var msg =
+                    data && data.error
+                        ? data.error
+                        : "Unknown error";
 
-                }else if(item.mimeType === "application/json"){
-                    GLink = "https://www.googleapis.com/drive/v3/files/" + item.id + "?alt=media&key=" + Gkey;
 
-                    if (item.name.startsWith("setting")) {
-                        //this item is a Design Explore's setting file 
-                        settingFiles[item.name] = GLink;
-                    } else {
-                        //this item is a json model
-                        jsonFiles[item.name] = GLink;
+                alert(
+                    "Google Drive loading failed: " +
+                    msg
+                );
+
+                return;
+            }
+
+
+            (data.files || [])
+                .forEach(function(item) {
+
+                    var name =
+                        item.name || "";
+
+                    var lower =
+                        name.toLowerCase();
+
+                    var fileUrl =
+                        item.url;
+
+
+                    // CSV
+                    if (
+                        lower.endsWith(".csv")
+                    ) {
+
+                        googleReturnObj
+                            .csvFiles[name] =
+                            fileUrl;
                     }
-                }
 
-            });
+
+                    // IMAGE
+                    else if (
+
+                        (item.mimeType || "")
+                            .indexOf("image/") === 0
+
+                        ||
+
+                        /\.(png|jpg|jpeg|gif|webp)$/i
+                            .test(name)
+
+                    ) {
+
+                        googleReturnObj
+                            .imgFiles[name] =
+                            fileUrl;
+                    }
+
+
+                    // JSON
+                    else if (
+
+                        (item.mimeType || "") ===
+                            "application/json"
+
+                        ||
+
+                        lower.endsWith(".json")
+
+                    ) {
+
+                        if (
+                            lower.indexOf(
+                                "setting"
+                            ) === 0
+                        ) {
+
+                            googleReturnObj
+                                .settingFiles[name] =
+                                fileUrl;
+
+                        } else {
+
+                            googleReturnObj
+                                .jsonFiles[name] =
+                                fileUrl;
+                        }
+                    }
+
+                });
+
+
+            _googleReturnObj =
+                googleReturnObj;
+
+
+            var csvFile =
+                googleReturnObj
+                    .csvFiles["data.csv"];
+
+
+            if (!csvFile) {
+
+                alert(
+                    "Could not find data.csv " +
+                    "in the Google Drive folder."
+                );
+
+                return;
+            }
+
+
+            readyToLoad(csvFile);
+
+        }
+    );
+}
 
         } else if(folder.type=== "OneDrive") { //this is OneDrive returned obj
             var files = [];
