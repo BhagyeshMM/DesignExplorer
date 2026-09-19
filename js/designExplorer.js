@@ -1,24 +1,35 @@
 function unloadPageContent() {
     /*
-    	// This function removes current contents from the page
-    	// Only base HTML objects will remain in the page afterwards
-    	// Use this in case you want to load new data to the page
+        This function removes current contents from the page.
+        Only base HTML objects will remain in the page afterwards.
     */
 
     overwriteInitialGlobalValues();
 
-    d3.select("div.legend").selectAll("*").remove(); // remove legend
+    d3.select("div.legend")
+        .selectAll("*")
+        .remove();
 
-    d3.select("#inputSliders").selectAll("*").remove(); //remove sliders
-    d3.select("#inputSliders").append("form").attr("class", "sliders"); // append a form
+    d3.select("#inputSliders")
+        .selectAll("*")
+        .remove();
 
-    d3.select("div#graph").selectAll("*").remove(); //remove left side parallel coord graph
-    d3.select("div#radarChart").selectAll("*").remove(); //remove right side graph
+    d3.select("#inputSliders")
+        .append("form")
+        .attr("class", "sliders");
+
+    d3.select("div#graph")
+        .selectAll("*")
+        .remove();
+
+    d3.select("div#radarChart")
+        .selectAll("*")
+        .remove();
 
     d3.select("div#thumbnails-btm_container")
         .select("div#sorting")
         .selectAll("*")
-        .remove(); // remove sorting drop-down
+        .remove();
 
     d3.select("div#thumbnails-btm_container")
         .select("div#sorting")
@@ -27,12 +38,12 @@ function unloadPageContent() {
     d3.select("div#thumbnails-btm_container")
         .select("div#thumbnails-btm")
         .selectAll("*")
-        .remove(); // remove thumbnail images
+        .remove();
 
     d3.select("div#thumbnails-side_container")
         .select("div#sorting")
         .selectAll("*")
-        .remove(); // remove thumbnail images
+        .remove();
 
     d3.select("div#thumbnails-side_container")
         .select("div#sorting")
@@ -41,55 +52,57 @@ function unloadPageContent() {
     d3.select("div#thumbnails-side_container")
         .select("div#thumbnails-side")
         .selectAll("*")
-        .remove(); // remove thumbnail images
+        .remove();
 
     d3.select("div#zoomed")
         .selectAll("*")
-        .remove(); //remove zoomed image if any
+        .remove();
 
     d3.select("div#viewer3d")
         .selectAll("*")
-        .remove(); //remove any object inside 3D viewer
+        .remove();
 }
 
 
 function calWidthAndHeight() {
 
-    windowWidth = window.innerWidth,
-    windowHeight = window.innerHeight,
-    cleanHeight = windowHeight - 115, // 2
-    cleanWidth = windowWidth - 100,
-    graphHeight = (cleanHeight / 3) - 24, //remove 22+2 top tool button
-    zoomedHeight = (cleanHeight * 2 / 3); //remove 22+2 top tool button
+    windowWidth = window.innerWidth;
+    windowHeight = window.innerHeight;
 
+    cleanHeight = windowHeight - 115;
+    cleanWidth = windowWidth - 100;
+
+    graphHeight = (cleanHeight / 3) - 24;
+
+    zoomedHeight = (cleanHeight * 2 / 3);
 }
 
 
 function overwriteInitialGlobalValues() {
+
     /*
-    	// This function initiates all the global values for the page
-    	// I'm not sure if this is the best practice in javascript (probably it's not)
-    	// Let me (github.com/mostaphaRoudsari) know if you know a better solution
+        This function initiates all the global values for the page.
     */
 
-    originalData = ""; //csv as it is imported
+    originalData = "";
 
-    cleanedData = []; //all the columns to be used for parallel coordinates
+    cleanedData = [];
 
-    numericalData = [],
-    inputData = []; // columns with input values - to be used for sliders
+    numericalData = [];
 
-    outputData = []; // columns with output values - to be used for radar graph
+    inputData = [];
 
-    slidersInfo = []; // {name:'inputName', tickValues : [sorted set of values]},
+    outputData = [];
 
-    currentSliderValues = {}; // collector for values
+    slidersInfo = [];
+
+    currentSliderValues = {};
 
     allDataCollector = {};
 
-    slidersMapping = {}; // I collect the data for all the input sliders here so I can use it to remap the sliders later
+    slidersMapping = {};
 
-    ids = []; // Here I collect all data based on a unique ID from inputs
+    ids = [];
 
     cleanedKeys4pc = {};
 
@@ -103,6 +116,7 @@ function overwriteInitialGlobalValues() {
 
 
     _userSetting = {
+
         studyInfo: {
             name: "",
             date: ""
@@ -116,7 +130,8 @@ function overwriteInitialGlobalValues() {
     };
 
 
-    rcheight = height =
+    rcheight =
+        height =
         d3.select("#graph")
             .style("height")
             .replace("px", "");
@@ -124,10 +139,9 @@ function overwriteInitialGlobalValues() {
 
     selectedDataFormatted = [];
 
-    firstRating = true; // variable for star rating
+    firstRating = true;
 
 
-    //set up heights of divs ro default
     calWidthAndHeight();
 
 
@@ -137,29 +151,30 @@ function overwriteInitialGlobalValues() {
             .replace("px", "");
 
 
-    // hide zoomed area
     d3.selectAll(".zoomed")
         .style("height", "0px");
 
 
-    // show btm thumbnail
     d3.select("#thumbnails-btm_container")
-        .style("height", zoomedHeight + "px");
+        .style(
+            "height",
+            zoomedHeight + "px"
+        );
 
 
-    // re-set the viewer to 2D
     currentView = "2D";
 
 
-    // set view toggle to 2D
     d3.select("input#toggleView")
-        .property("checked", "true");
+        .property("checked", true);
 
 
     initit3DViewer = true;
 
+
     d3.select("#zoomed")
         .classed("hidden", false);
+
 
     d3.select("#viewer3d")
         .classed("hidden", true);
@@ -167,7 +182,7 @@ function overwriteInitialGlobalValues() {
 
 
 /* ============================================================
-   GOOGLE DRIVE RETURN OBJECT
+   GOOGLE DRIVE FILE OBJECT
    ============================================================ */
 
 var _googleReturnObj = {
@@ -184,25 +199,28 @@ var _googleReturnObj = {
 
 
 /* ============================================================
-   GET GOOGLE DRIVE FOLDER ID
+   GOOGLE DRIVE FOLDER ID
    ============================================================ */
 
 function getGFolderID(link) {
 
     link = String(link || "").trim();
 
+
     var match;
 
 
     /*
-        Standard Google Drive folder URL:
+        Standard folder URL:
 
         https://drive.google.com/drive/folders/FOLDER_ID
     */
 
-    match = link.match(
-        /\/folders\/([a-zA-Z0-9_-]+)/
-    );
+    match =
+        link.match(
+            /\/folders\/([a-zA-Z0-9_-]+)/
+        );
+
 
     if (match) {
         return match[1];
@@ -210,12 +228,14 @@ function getGFolderID(link) {
 
 
     /*
-        Google Drive URL containing ?id=FOLDER_ID
+        URL with ?id=FOLDER_ID
     */
 
-    match = link.match(
-        /[?&]id=([a-zA-Z0-9_-]+)/
-    );
+    match =
+        link.match(
+            /[?&]id=([a-zA-Z0-9_-]+)/
+        );
+
 
     if (match) {
         return match[1];
@@ -223,13 +243,15 @@ function getGFolderID(link) {
 
 
     /*
-        Allow the user to enter the folder ID directly.
+        Folder ID entered directly.
     */
 
     if (
         /^[a-zA-Z0-9_-]{20,}$/.test(link)
     ) {
+
         return link;
+
     }
 
 
@@ -238,25 +260,26 @@ function getGFolderID(link) {
 
 
 /* ============================================================
-   GOOGLE DRIVE / SERVER LINK DETECTION
+   CHECK INPUT LINK
    ============================================================ */
 
 function checkInputLink(link, callback) {
 
+    link =
+        String(link || "").trim();
+
+
     var folderLinkObj = {
 
-        "DE_PW": "",
+        DE_PW: "",
 
-        "inLink": link,
+        inLink: link,
 
-        "url": "",
+        url: "",
 
-        "type": ""
+        type: ""
 
     };
-
-
-    link = String(link || "").trim();
 
 
     /*
@@ -264,9 +287,17 @@ function checkInputLink(link, callback) {
     */
 
     if (
-        link.indexOf("drive.google.com") !== -1
+
+        link.indexOf(
+            "drive.google.com"
+        ) !== -1
+
         ||
-        /^[a-zA-Z0-9_-]{20,}$/.test(link)
+
+        /^[a-zA-Z0-9_-]{20,}$/.test(
+            link
+        )
+
     ) {
 
         var folderId =
@@ -288,14 +319,16 @@ function checkInputLink(link, callback) {
 
 
         /*
-            Send the Google Drive folder ID
-            to the Google Apps Script proxy.
+            The Apps Script endpoint will be
+            called using JSONP.
         */
 
         folderLinkObj.url =
             GOOGLE_DRIVE_PROXY +
             "?folderId=" +
-            encodeURIComponent(folderId);
+            encodeURIComponent(
+                folderId
+            );
 
 
         folderLinkObj.type =
@@ -310,23 +343,33 @@ function checkInputLink(link, callback) {
 
     else {
 
-        if (link.slice(-1) !== "/") {
+        if (
+            link.slice(-1) !== "/"
+        ) {
+
             link += "/";
+
         }
 
-        folderLinkObj.url = link;
+
+        folderLinkObj.url =
+            link;
+
 
         folderLinkObj.type =
             "userServerLink";
+
     }
 
 
-    callback(folderLinkObj);
+    callback(
+        folderLinkObj
+    );
 }
 
 
 /* ============================================================
-   API / CONFIGURATION
+   CONFIGURATION
    ============================================================ */
 
 var Gkey =
@@ -337,14 +380,229 @@ var BitlyKey =
     "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
 
 
-/*
-    Google Apps Script proxy.
-
-    This is the deployed /exec URL.
-*/
-
 var GOOGLE_DRIVE_PROXY =
     "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
+
+
+/* ============================================================
+   GOOGLE DRIVE JSONP LOADER
+   ============================================================ */
+
+function loadGoogleDriveJSONP(
+    url,
+    successCallback,
+    errorCallback
+) {
+
+    /*
+        Generate a unique global callback name.
+    */
+
+    var callbackName =
+        "__designExplorerGoogleCallback_" +
+        new Date().getTime() +
+        "_" +
+        Math.floor(
+            Math.random() * 100000
+        );
+
+
+    var script =
+        document.createElement("script");
+
+
+    var timeout;
+
+
+    var finished = false;
+
+
+    /*
+        Cleanup function.
+    */
+
+    function cleanup() {
+
+        if (finished) {
+            return;
+        }
+
+
+        finished = true;
+
+
+        if (timeout) {
+
+            clearTimeout(
+                timeout
+            );
+
+        }
+
+
+        try {
+
+            delete window[
+                callbackName
+            ];
+
+        }
+
+        catch (e) {
+
+            window[
+                callbackName
+            ] = undefined;
+
+        }
+
+
+        if (
+            script &&
+            script.parentNode
+        ) {
+
+            script.parentNode.removeChild(
+                script
+            );
+
+        }
+
+    }
+
+
+    /*
+        Callback called by Google Apps Script.
+
+        The Apps Script response will look like:
+
+        __designExplorerGoogleCallback_123({
+            "files":[...]
+        });
+    */
+
+    window[
+        callbackName
+    ] = function(data) {
+
+        console.log(
+            "Google Drive JSONP response:",
+            data
+        );
+
+
+        cleanup();
+
+
+        if (
+            typeof successCallback ===
+            "function"
+        ) {
+
+            successCallback(
+                data
+            );
+
+        }
+
+    };
+
+
+    /*
+        Handle script loading errors.
+    */
+
+    script.onerror =
+        function(error) {
+
+            console.error(
+                "Google Drive JSONP request failed:",
+                error
+            );
+
+
+            cleanup();
+
+
+            if (
+                typeof errorCallback ===
+                "function"
+            ) {
+
+                errorCallback(
+                    error
+                );
+
+            }
+
+        };
+
+
+    /*
+        Add callback parameter.
+    */
+
+    var separator =
+        url.indexOf("?") === -1
+            ? "?"
+            : "&";
+
+
+    script.src =
+        url +
+        separator +
+        "callback=" +
+        encodeURIComponent(
+            callbackName
+        );
+
+
+    script.async = true;
+
+
+    /*
+        Timeout after 30 seconds.
+    */
+
+    timeout =
+        setTimeout(
+            function() {
+
+                if (finished) {
+                    return;
+                }
+
+
+                console.error(
+                    "Google Drive JSONP request timed out."
+                );
+
+
+                cleanup();
+
+
+                if (
+                    typeof errorCallback ===
+                    "function"
+                ) {
+
+                    errorCallback(
+                        new Error(
+                            "Google Drive JSONP request timed out."
+                        )
+                    );
+
+                }
+
+            },
+            30000
+        );
+
+
+    document
+        .getElementsByTagName("head")[0]
+        .appendChild(script);
+}
 
 
 /* ============================================================
@@ -358,27 +616,26 @@ function prepareGFolder(folderLink) {
     );
 
     console.log(
-        "Design Explorer: loading Google Drive"
+        "Design Explorer Google Drive loader"
     );
 
     console.log(
-        "Google Drive proxy URL:",
+        "Folder ID:",
+        folderLink.folderId
+    );
+
+    console.log(
+        "Proxy:",
         folderLink.url
+    );
+
+    console.log(
+        "========================================"
     );
 
 
     /*
-        Reset the global object.
-
-        IMPORTANT:
-        Do not use a separate googleReturnObj object here.
-
-        index.html -> makeUrl() directly reads:
-
-        _googleReturnObj.csvFiles
-        _googleReturnObj.imgFiles
-        _googleReturnObj.jsonFiles
-        _googleReturnObj.settingFiles
+        Reset file maps.
     */
 
     _googleReturnObj = {
@@ -395,22 +652,27 @@ function prepareGFolder(folderLink) {
 
 
     /*
-        Ask the Apps Script proxy for the files.
+        Use JSONP instead of d3.json().
+
+        d3.json() performs XMLHttpRequest.
+        Google Apps Script ContentService is
+        cross-origin, so JSONP avoids the XHR/CORS
+        problem.
     */
 
-    d3.json(
+    loadGoogleDriveJSONP(
+
         folderLink.url,
 
         function(data) {
 
             console.log(
-                "Google Drive proxy response:",
-                data
+                "Google Drive data received."
             );
 
 
             /*
-                No response.
+                Validate response.
             */
 
             if (!data) {
@@ -421,7 +683,7 @@ function prepareGFolder(folderLink) {
                 );
 
                 console.error(
-                    "Google Drive proxy returned no data."
+                    "Google Drive JSONP returned no data."
                 );
 
                 return;
@@ -429,7 +691,7 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                Error returned by Apps Script.
+                Apps Script error.
             */
 
             if (data.error) {
@@ -449,10 +711,14 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                Make sure the proxy returned files.
+                Validate files array.
             */
 
-            if (!Array.isArray(data.files)) {
+            if (
+                !Array.isArray(
+                    data.files
+                )
+            ) {
 
                 alert(
                     "Google Drive loading failed: " +
@@ -460,7 +726,7 @@ function prepareGFolder(folderLink) {
                 );
 
                 console.error(
-                    "Invalid Google Drive proxy response:",
+                    "Invalid Google Drive response:",
                     data
                 );
 
@@ -469,13 +735,13 @@ function prepareGFolder(folderLink) {
 
 
             console.log(
-                "Files returned by Google Drive proxy:",
+                "Google Drive files returned:",
                 data.files.length
             );
 
 
             /*
-                Process every file.
+                Process files.
             */
 
             data.files.forEach(
@@ -487,7 +753,9 @@ function prepareGFolder(folderLink) {
 
 
                     var name =
-                        String(item.name || "").trim();
+                        String(
+                            item.name || ""
+                        ).trim();
 
 
                     var lowerName =
@@ -495,23 +763,28 @@ function prepareGFolder(folderLink) {
 
 
                     var fileUrl =
-                        String(item.url || "").trim();
+                        String(
+                            item.url || ""
+                        ).trim();
 
 
                     var mimeType =
-                        String(item.mimeType || "")
-                            .toLowerCase();
+                        String(
+                            item.mimeType || ""
+                        ).toLowerCase();
 
 
                     /*
-                        Skip files without a filename
-                        or URL.
+                        Skip invalid entries.
                     */
 
-                    if (!name || !fileUrl) {
+                    if (
+                        !name ||
+                        !fileUrl
+                    ) {
 
                         console.warn(
-                            "Skipping file with missing name or URL:",
+                            "Skipping invalid file:",
                             item
                         );
 
@@ -519,20 +792,14 @@ function prepareGFolder(folderLink) {
                     }
 
 
-                    console.log(
-                        "Processing Google Drive file:",
-                        name,
-                        "=>",
-                        fileUrl
-                    );
-
-
-                    /* =================================================
-                       CSV
-                       ================================================= */
+                    /*
+                        CSV
+                    */
 
                     if (
-                        lowerName.endsWith(".csv")
+                        lowerName.endsWith(
+                            ".csv"
+                        )
                     ) {
 
                         _googleReturnObj
@@ -542,9 +809,9 @@ function prepareGFolder(folderLink) {
                     }
 
 
-                    /* =================================================
-                       IMAGE
-                       ================================================= */
+                    /*
+                        IMAGE
+                    */
 
                     else if (
 
@@ -566,9 +833,9 @@ function prepareGFolder(folderLink) {
                     }
 
 
-                    /* =================================================
-                       JSON
-                       ================================================= */
+                    /*
+                        JSON
+                    */
 
                     else if (
 
@@ -577,15 +844,14 @@ function prepareGFolder(folderLink) {
 
                         ||
 
-                        lowerName.endsWith(".json")
+                        lowerName.endsWith(
+                            ".json"
+                        )
 
                     ) {
 
                         /*
-                            Design Explorer treats files beginning
-                            with "setting" as settings files.
-
-                            All other JSON files are 3D model files.
+                            Settings files.
                         */
 
                         if (
@@ -599,6 +865,11 @@ function prepareGFolder(folderLink) {
                                 fileUrl;
 
                         }
+
+
+                        /*
+                            3D model files.
+                        */
 
                         else {
 
@@ -614,16 +885,44 @@ function prepareGFolder(folderLink) {
             );
 
 
-            /* =========================================================
-               DEBUG OUTPUT
-               ========================================================= */
+            /* =====================================================
+               FILE MAP DIAGNOSTICS
+               ===================================================== */
 
             console.log(
                 "========================================"
             );
 
             console.log(
-                "Google Drive file map created."
+                "Design Explorer Google Drive file map"
+            );
+
+            console.log(
+                "CSV count:",
+                Object.keys(
+                    _googleReturnObj.csvFiles
+                ).length
+            );
+
+            console.log(
+                "Image count:",
+                Object.keys(
+                    _googleReturnObj.imgFiles
+                ).length
+            );
+
+            console.log(
+                "3D JSON count:",
+                Object.keys(
+                    _googleReturnObj.jsonFiles
+                ).length
+            );
+
+            console.log(
+                "Setting count:",
+                Object.keys(
+                    _googleReturnObj.settingFiles
+                ).length
             );
 
             console.log(
@@ -647,47 +946,20 @@ function prepareGFolder(folderLink) {
             );
 
             console.log(
-                "Image file count:",
-                Object.keys(
-                    _googleReturnObj.imgFiles
-                ).length
-            );
-
-            console.log(
-                "3D JSON file count:",
-                Object.keys(
-                    _googleReturnObj.jsonFiles
-                ).length
-            );
-
-            console.log(
-                "CSV file count:",
-                Object.keys(
-                    _googleReturnObj.csvFiles
-                ).length
-            );
-
-            console.log(
-                "Setting file count:",
-                Object.keys(
-                    _googleReturnObj.settingFiles
-                ).length
-            );
-
-            console.log(
                 "========================================"
             );
 
 
-            /* =========================================================
-               FIND data.csv
-               ========================================================= */
+            /* =====================================================
+               FIND DATA.CSV
+               ===================================================== */
 
-            var csvFile = null;
+            var csvFile =
+                null;
 
 
             /*
-                First try the exact filename.
+                Exact data.csv.
             */
 
             if (
@@ -703,8 +975,7 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                If capitalization differs,
-                search case-insensitively.
+                Case-insensitive fallback.
             */
 
             if (!csvFile) {
@@ -721,10 +992,13 @@ function prepareGFolder(folderLink) {
 
                             csvFile =
                                 _googleReturnObj
-                                    .csvFiles[filename];
+                                    .csvFiles[
+                                        filename
+                                    ];
 
                             return true;
                         }
+
 
                         return false;
 
@@ -735,7 +1009,7 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                Stop if data.csv does not exist.
+                data.csv missing.
             */
 
             if (!csvFile) {
@@ -763,47 +1037,59 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                Make sure _folderInfo points to the
-                Google Drive object.
-
-                makeUrl() in index.html uses _folderInfo.
+                Keep the folder information globally
+                available to index.html.
             */
 
-            _folderInfo = folderLink;
+            _folderInfo =
+                folderLink;
 
 
             /*
-                Start loading Design Explorer data.
+                Start Design Explorer.
             */
 
-            readyToLoad(csvFile);
+            readyToLoad(
+                csvFile
+            );
+
+        },
+
+
+        function(error) {
+
+            alert(
+                "Google Drive loading failed: " +
+                "The Apps Script JSONP request could not be completed."
+            );
+
+
+            console.error(
+                "Google Drive JSONP error:",
+                error
+            );
 
         }
+
     );
 }
 
 
 /* ============================================================
-   GET URL VARIABLES
-   ============================================================
-
-   decodeUrlID() calls getUrlVars().
-
-   This function was missing from the supplied modified file.
+   URL PARAMETER PARSER
    ============================================================ */
 
 function getUrlVars(url) {
 
     var vars = {};
 
-    url = String(
-        url || window.location.href
-    );
 
+    url =
+        String(
+            url ||
+            window.location.href
+        );
 
-    /*
-        Get the query-string portion.
-    */
 
     var query =
         url.split("?")[1];
@@ -814,50 +1100,47 @@ function getUrlVars(url) {
     }
 
 
-    /*
-        Remove URL fragment.
-    */
-
     query =
         query.split("#")[0];
 
 
-    /*
-        Parse each parameter.
-    */
+    query.split("&")
+        .forEach(
+            function(part) {
 
-    query.split("&").forEach(
-        function(part) {
+                if (!part) {
+                    return;
+                }
 
-            if (!part) {
-                return;
+
+                var pieces =
+                    part.split("=");
+
+
+                var key =
+                    decodeURIComponent(
+                        pieces[0] || ""
+                    );
+
+
+                var value =
+                    decodeURIComponent(
+                        pieces
+                            .slice(1)
+                            .join("=") ||
+                        ""
+                    );
+
+
+                if (key) {
+
+                    vars[key] =
+                        value;
+
+                }
+
             }
-
-
-            var pieces =
-                part.split("=");
-
-
-            var key =
-                decodeURIComponent(
-                    pieces[0] || ""
-                );
-
-
-            var value =
-                decodeURIComponent(
-                    pieces.slice(1).join("=") || ""
-                );
-
-
-            if (key) {
-
-                vars[key] = value;
-
-            }
-
-        }
-    );
+        );
 
 
     return vars;
@@ -865,7 +1148,7 @@ function getUrlVars(url) {
 
 
 /* ============================================================
-   LOAD GOOGLE ID / URL
+   LOAD GOOGLE ID AND DATA
    ============================================================ */
 
 function MP_getGoogleIDandLoad(dataMethod) {
@@ -878,7 +1161,9 @@ function MP_getGoogleIDandLoad(dataMethod) {
     ).value = "";
 
 
-    if (dataMethod === "URL") {
+    if (
+        dataMethod === "URL"
+    ) {
 
         document.getElementById(
             "folderLink"
@@ -890,6 +1175,7 @@ function MP_getGoogleIDandLoad(dataMethod) {
 
 
         decodeUrlID(
+
             inUrl,
 
             function(d) {
@@ -897,8 +1183,8 @@ function MP_getGoogleIDandLoad(dataMethod) {
                 loadFromUrl(d);
 
             }
-        );
 
+        );
 
     }
 
@@ -925,17 +1211,13 @@ function MP_getGoogleIDandLoad(dataMethod) {
 function loadFromUrl(rawUrl) {
 
     checkInputLink(
+
         rawUrl,
 
         function(d) {
 
-            /*
-                Set global folder information.
-
-                makeUrl() in index.html uses this.
-            */
-
-            _folderInfo = d;
+            _folderInfo =
+                d;
 
 
             if (
@@ -944,9 +1226,7 @@ function loadFromUrl(rawUrl) {
             ) {
 
                 /*
-                    User-hosted server.
-
-                    Load data.csv directly.
+                    Normal user server.
                 */
 
                 readyToLoad(
@@ -960,15 +1240,16 @@ function loadFromUrl(rawUrl) {
 
                 /*
                     Google Drive.
-
-                    Load through Apps Script proxy.
                 */
 
-                prepareGFolder(d);
+                prepareGFolder(
+                    d
+                );
 
             }
 
         }
+
     );
 }
 
@@ -1023,8 +1304,6 @@ function changeLabelSize(size) {
 
 function encodeUrl(url) {
 
-    // var link = btoa(url).slice(0, -1).replace('/','_').replace('+','-');
-
     var link =
         btoa(url);
 
@@ -1038,14 +1317,15 @@ function encodeUrl(url) {
 
 function decodeUrl(encodedString) {
 
-    // var url = atob(encodedString.replace('_','/').replace('-','+')+"=");
-
     var url = "";
+
 
     try {
 
         url =
-            atob(encodedString);
+            atob(
+                encodedString
+            );
 
     }
 
@@ -1060,12 +1340,19 @@ function decodeUrl(encodedString) {
         url =
             atob(
                 encodedString
-                    .replace("_", "/")
-                    .replace("-", "+") +
+                    .replace(
+                        "_",
+                        "/"
+                    )
+                    .replace(
+                        "-",
+                        "+"
+                    ) +
                 "="
             );
 
     }
+
 
     return url;
 }
@@ -1082,7 +1369,9 @@ function CopyToClipboard(element) {
 
 
     $("body")
-        .append($temp);
+        .append(
+            $temp
+        );
 
 
     $temp
@@ -1102,10 +1391,13 @@ function CopyToClipboard(element) {
 
 
 /* ============================================================
-   CREATE URL ID
+   BITLY URL CREATION
    ============================================================ */
 
-function makeUrlId(rawUrl, callback) {
+function makeUrlId(
+    rawUrl,
+    callback
+) {
 
     var longUrl =
         rawUrl;
@@ -1113,7 +1405,8 @@ function makeUrlId(rawUrl, callback) {
 
     $.ajax({
 
-        type: "POST",
+        type:
+            "POST",
 
         contentType:
             "application/json",
@@ -1123,7 +1416,10 @@ function makeUrlId(rawUrl, callback) {
 
         data:
             JSON.stringify({
-                "long_url": longUrl
+
+                "long_url":
+                    longUrl
+
             }),
 
         headers: {
@@ -1139,11 +1435,6 @@ function makeUrlId(rawUrl, callback) {
         error:
             function(e) {
 
-                /*
-                    If Bitly fails,
-                    fall back to encoded URL.
-                */
-
                 callback(
                     encodeUrl(
                         longUrl
@@ -1158,21 +1449,18 @@ function makeUrlId(rawUrl, callback) {
         success:
             function(response) {
 
-                var UrlID = "";
+                var UrlID =
+                    "";
 
 
                 if (
                     response.id != null
                 ) {
 
-                    /*
-                        response.id example:
-
-                        https://bit.ly/abc123
-                    */
-
                     UrlID =
-                        response.id.split("/");
+                        response.id.split(
+                            "/"
+                        );
 
 
                     UrlID =
@@ -1195,10 +1483,13 @@ function makeUrlId(rawUrl, callback) {
 
 
 /* ============================================================
-   GET URL ID
+   GET BITLY URL
    ============================================================ */
 
-function getUrlID(urlID, callback) {
+function getUrlID(
+    urlID,
+    callback
+) {
 
     $.ajax({
 
@@ -1257,9 +1548,13 @@ function getUrlID(urlID, callback) {
    DECODE URL ID
    ============================================================ */
 
-function decodeUrlID(rawUrl, callback) {
+function decodeUrlID(
+    rawUrl,
+    callback
+) {
 
-    var serverFolderLink = "";
+    var serverFolderLink =
+        "";
 
 
     var urlVars =
@@ -1281,16 +1576,14 @@ function decodeUrlID(rawUrl, callback) {
        ========================================================= */
 
     if (
-        GfolderORUrl !== undefined
+        GfolderORUrl !==
+        undefined
     ) {
 
-        /*
-            If GFOLDER contains only an ID,
-            convert it into a Google Drive folder URL.
-        */
-
         if (
-            GfolderORUrl.search("/") == -1
+            GfolderORUrl.search(
+                "/"
+            ) == -1
         ) {
 
             serverFolderLink =
@@ -1315,7 +1608,7 @@ function decodeUrlID(rawUrl, callback) {
 
 
     /* =========================================================
-       ENCODED ID FORMAT
+       ID FORMAT
        ========================================================= */
 
     else if (
@@ -1327,7 +1620,7 @@ function decodeUrlID(rawUrl, callback) {
 
 
         /*
-            Old Google URL shortener format.
+            Old goo.gl format.
         */
 
         if (
@@ -1341,16 +1634,32 @@ function decodeUrlID(rawUrl, callback) {
                 "&shortUrl=http://goo.gl/" +
                 linkID,
 
-                function(d) {
+                function(error, d) {
+
+                    /*
+                        Support both old D3 callback
+                        forms.
+                    */
 
                     if (
+                        arguments.length === 1
+                    ) {
+
+                        d = error;
+                        error = null;
+
+                    }
+
+
+                    if (
+                        error ||
                         !d ||
                         !d.longUrl
                     ) {
 
                         console.error(
-                            "Google URL shortener returned no longUrl:",
-                            d
+                            "Could not expand Google short URL:",
+                            error || d
                         );
 
                         return;
@@ -1363,12 +1672,10 @@ function decodeUrlID(rawUrl, callback) {
                         ).ID;
 
 
-                    if (
-                        !GID
-                    ) {
+                    if (!GID) {
 
                         console.error(
-                            "Could not extract ID from short URL:",
+                            "Could not extract ID from:",
                             d.longUrl
                         );
 
@@ -1397,7 +1704,9 @@ function decodeUrlID(rawUrl, callback) {
         */
 
         else if (
-            linkID.startsWith("BL_")
+            linkID.startsWith(
+                "BL_"
+            )
         ) {
 
             getUrlID(
@@ -1412,7 +1721,7 @@ function decodeUrlID(rawUrl, callback) {
                     if (!d) {
 
                         console.error(
-                            "Bitly returned no URL."
+                            "Bitly did not return a URL."
                         );
 
                         return;
@@ -1428,7 +1737,7 @@ function decodeUrlID(rawUrl, callback) {
                     if (!GID) {
 
                         console.error(
-                            "Could not extract ID from Bitly URL:",
+                            "Could not extract ID from:",
                             d
                         );
 
@@ -1453,7 +1762,7 @@ function decodeUrlID(rawUrl, callback) {
 
 
         /*
-            Normal encoded URL.
+            Direct encoded URL.
         */
 
         else {
@@ -1473,14 +1782,10 @@ function decodeUrlID(rawUrl, callback) {
     }
 
 
-    /* =========================================================
-       NO RECOGNIZED URL PARAMETERS
-       ========================================================= */
-
     else {
 
         console.warn(
-            "No GFOLDER or ID parameter found in URL:",
+            "No GFOLDER or ID parameter found:",
             rawUrl
         );
 
