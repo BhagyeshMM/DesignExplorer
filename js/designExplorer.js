@@ -108,62 +108,104 @@ var _googleReturnObj = {
     settingFiles: {}
 
 };
+/* ============================================================
+   GOOGLE DRIVE FILE MAP
+   ============================================================ */
+
+var _googleReturnObj = {
+    csvFiles: {},
+    imgFiles: {},
+    jsonFiles: {},
+    settingFiles: {}
+};
+
+
+/* ============================================================
+   GET GOOGLE DRIVE FOLDER ID
+   ============================================================ */
+
 function getGFolderID(link) {
 
-    var m = String(link || "")
-        .match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    link = String(link || "").trim();
 
-    if (m) {
-        return m[1];
+    var match;
+
+    /*
+        Standard Google Drive folder URL:
+
+        https://drive.google.com/drive/folders/FOLDER_ID
+    */
+
+    match = link.match(
+        /\/folders\/([a-zA-Z0-9_-]+)/
+    );
+
+    if (match) {
+        return match[1];
     }
 
-    m = String(link || "")
-        .match(/[?&]id=([a-zA-Z0-9_-]+)/);
 
-    if (m) {
-        return m[1];
+    /*
+        Google Drive URL containing ?id=FOLDER_ID
+    */
+
+    match = link.match(
+        /[?&]id=([a-zA-Z0-9_-]+)/
+    );
+
+    if (match) {
+        return match[1];
     }
+
+
+    /*
+        Allow the user to enter the folder ID directly.
+    */
 
     if (
-        /^[a-zA-Z0-9_-]{20,}$/.test(
-            String(link || "")
-        )
+        /^[a-zA-Z0-9_-]{20,}$/.test(link)
     ) {
         return link;
     }
+
 
     return "";
 }
 
 
+/* ============================================================
+   CHECK INPUT LINK
+   ============================================================ */
+
 function checkInputLink(link, callback) {
 
     var folderLinkObj = {
 
-        "DE_PW": "",
+        DE_PW: "",
 
-        "inLink": link,
+        inLink: link,
 
-        "url": "",
+        url: "",
 
-        "type": ""
+        type: ""
 
     };
 
 
-    // GOOGLE DRIVE
+    link = String(link || "").trim();
+
+
+    /*
+        GOOGLE DRIVE
+    */
+
     if (
-        String(link).indexOf(
-            "drive.google.com"
-        ) !== -1
+        link.indexOf("drive.google.com") !== -1
         ||
-        /^[a-zA-Z0-9_-]{20,}$/.test(
-            String(link || "")
-        )
+        /^[a-zA-Z0-9_-]{20,}$/.test(link)
     ) {
 
-        var folderId =
-            getGFolderID(link);
+        var folderId = getGFolderID(link);
 
 
         if (!folderId) {
@@ -176,9 +218,13 @@ function checkInputLink(link, callback) {
         }
 
 
-        folderLinkObj.folderId =
-            folderId;
+        folderLinkObj.folderId = folderId;
 
+
+        /*
+            Send the folder ID to the Google Apps Script
+            proxy.
+        */
 
         folderLinkObj.url =
             GOOGLE_DRIVE_PROXY +
@@ -186,13 +232,15 @@ function checkInputLink(link, callback) {
             encodeURIComponent(folderId);
 
 
-        folderLinkObj.type =
-            "GoogleDrive";
+        folderLinkObj.type = "GoogleDrive";
 
 
     }
 
-    // SERVER LINK
+    /*
+        USER SERVER LINK
+    */
+
     else {
 
         if (link.slice(-1) !== "/") {
@@ -201,20 +249,66 @@ function checkInputLink(link, callback) {
 
         folderLinkObj.url = link;
 
-        folderLinkObj.type =
-            "userServerLink";
+        folderLinkObj.type = "userServerLink";
+
     }
 
 
     callback(folderLinkObj);
 }
-var Gkey = "AIzaSyCSrF08UMawxKIb0m4JsA1mYE5NMmP36bY";
-var BitlyKey = "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
-var GOOGLE_DRIVE_PROXY = "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
+
+
+/* ============================================================
+   GOOGLE / BITLY CONFIGURATION
+   ============================================================ */
+
+var Gkey =
+    "AIzaSyCSrF08UMawxKIb0m4JsA1mYE5NMmP36bY";
+
+var BitlyKey =
+    "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
+
+
+/*
+    Google Apps Script proxy.
+
+    IMPORTANT:
+    This must be the /exec URL of your deployed Apps Script.
+*/
+
+var GOOGLE_DRIVE_PROXY =
+    "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
+
+
+/* ============================================================
+   PREPARE GOOGLE DRIVE FOLDER
+   ============================================================ */
 
 function prepareGFolder(folderLink) {
 
-    googleReturnObj = {
+    console.log(
+        "========================================"
+    );
+
+    console.log(
+        "Design Explorer: loading Google Drive"
+    );
+
+    console.log(
+        "Proxy URL:",
+        folderLink.url
+    );
+
+
+    /*
+        Always reset the global file map.
+
+        Do NOT create a separate googleReturnObj variable
+        and then copy it later.  The rest of Design Explorer
+        reads _googleReturnObj directly.
+    */
+
+    _googleReturnObj = {
 
         csvFiles: {},
 
@@ -227,57 +321,165 @@ function prepareGFolder(folderLink) {
     };
 
 
+    /*
+        Ask the Apps Script proxy for all files in
+        the Google Drive folder.
+    */
+
     d3.json(
+
         folderLink.url,
+
         function(data) {
 
+            console.log(
+                "Google Drive proxy response:",
+                data
+            );
 
-            if (!data || data.error) {
 
-                var msg =
-                    data && data.error
-                        ? data.error
-                        : "Unknown error";
+            /*
+                Check for an invalid response.
+            */
 
+            if (!data) {
 
                 alert(
                     "Google Drive loading failed: " +
-                    msg
+                    "The proxy returned no data."
+                );
+
+                console.error(
+                    "Google Drive proxy returned no data."
                 );
 
                 return;
             }
 
 
-            (data.files || [])
-                .forEach(function(item) {
+            /*
+                Apps Script may return an error object.
+            */
 
-                    var name =
-                        item.name || "";
+            if (data.error) {
 
-                    var lower =
-                        name.toLowerCase();
+                alert(
+                    "Google Drive loading failed: " +
+                    data.error
+                );
 
-                    var fileUrl =
-                        item.url;
+                console.error(
+                    "Google Drive proxy error:",
+                    data.error
+                );
+
+                return;
+            }
 
 
-                    // CSV
-                    if (
-                        lower.endsWith(".csv")
-                    ) {
+            /*
+                Make sure the response contains a files array.
+            */
 
-                        googleReturnObj
-                            .csvFiles[name] =
-                            fileUrl;
+            if (!Array.isArray(data.files)) {
+
+                alert(
+                    "Google Drive loading failed: " +
+                    "The proxy response does not contain a files array."
+                );
+
+                console.error(
+                    "Invalid proxy response:",
+                    data
+                );
+
+                return;
+            }
+
+
+            console.log(
+                "Files returned by Google Drive proxy:",
+                data.files.length
+            );
+
+
+            /*
+                Process every file returned by Apps Script.
+            */
+
+            data.files.forEach(
+                function(item) {
+
+                    if (!item) {
+                        return;
                     }
 
 
-                    // IMAGE
+                    var name =
+                        String(item.name || "").trim();
+
+
+                    var lowerName =
+                        name.toLowerCase();
+
+
+                    var fileUrl =
+                        item.url || "";
+
+
+                    var mimeType =
+                        String(item.mimeType || "")
+                            .toLowerCase();
+
+
+                    /*
+                        Ignore entries without a filename
+                        or URL.
+                    */
+
+                    if (!name || !fileUrl) {
+
+                        console.warn(
+                            "Skipping file with missing name or URL:",
+                            item
+                        );
+
+                        return;
+                    }
+
+
+                    console.log(
+                        "Processing:",
+                        name,
+                        "->",
+                        fileUrl
+                    );
+
+
+                    /* ----------------------------------------
+                       CSV
+                       ---------------------------------------- */
+
+                    if (
+                        lowerName.endsWith(".csv")
+                    ) {
+
+                        _googleReturnObj
+                            .csvFiles[name] =
+                            fileUrl;
+
+                    }
+
+
+                    /* ----------------------------------------
+                       IMAGES
+                       ---------------------------------------- */
+
                     else if (
 
-                        (item.mimeType || "")
-                            .indexOf("image/") === 0
+                        mimeType.indexOf(
+                            "image/"
+                        ) === 0
 
                         ||
 
@@ -286,53 +488,160 @@ function prepareGFolder(folderLink) {
 
                     ) {
 
-                        googleReturnObj
+                        _googleReturnObj
                             .imgFiles[name] =
                             fileUrl;
+
                     }
 
 
-                    // JSON
+                    /* ----------------------------------------
+                       JSON
+                       ---------------------------------------- */
+
                     else if (
 
-                        (item.mimeType || "") ===
+                        mimeType ===
                             "application/json"
 
                         ||
 
-                        lower.endsWith(".json")
+                        lowerName.endsWith(".json")
 
                     ) {
 
+                        /*
+                            Design Explorer has a separate
+                            settingFiles collection.
+
+                            Files whose names start with
+                            "setting" go there.
+
+                            All other JSON files are treated
+                            as 3D model JSON files.
+                        */
+
                         if (
-                            lower.indexOf(
+                            lowerName.indexOf(
                                 "setting"
                             ) === 0
                         ) {
 
-                            googleReturnObj
+                            _googleReturnObj
                                 .settingFiles[name] =
                                 fileUrl;
 
-                        } else {
+                        }
 
-                            googleReturnObj
+                        else {
+
+                            _googleReturnObj
                                 .jsonFiles[name] =
                                 fileUrl;
+
                         }
+
                     }
 
-                });
+                }
+            );
 
 
-            _googleReturnObj =
-                googleReturnObj;
+            /* =================================================
+               DEBUG INFORMATION
+               ================================================= */
+
+            console.log(
+                "========================================"
+            );
+
+            console.log(
+                "Google Drive files loaded:"
+            );
+
+            console.log(
+                "CSV files:",
+                _googleReturnObj.csvFiles
+            );
+
+            console.log(
+                "Image files:",
+                _googleReturnObj.imgFiles
+            );
+
+            console.log(
+                "3D JSON files:",
+                _googleReturnObj.jsonFiles
+            );
+
+            console.log(
+                "Setting files:",
+                _googleReturnObj.settingFiles
+            );
+
+            console.log(
+                "========================================"
+            );
 
 
-            var csvFile =
-                googleReturnObj
-                    .csvFiles["data.csv"];
+            /* =================================================
+               FIND DATA.CSV
+               ================================================= */
 
+            var csvFile = null;
+
+
+            /*
+                First try the exact expected filename.
+            */
+
+            if (
+                _googleReturnObj
+                    .csvFiles["data.csv"]
+            ) {
+
+                csvFile =
+                    _googleReturnObj
+                        .csvFiles["data.csv"];
+
+            }
+
+
+            /*
+                If data.csv was not found because of
+                capitalization, search case-insensitively.
+            */
+
+            if (!csvFile) {
+
+                Object.keys(
+                    _googleReturnObj.csvFiles
+                ).some(
+                    function(filename) {
+
+                        if (
+                            filename.toLowerCase() ===
+                            "data.csv"
+                        ) {
+
+                            csvFile =
+                                _googleReturnObj
+                                    .csvFiles[filename];
+
+                            return true;
+                        }
+
+                        return false;
+
+                    }
+                );
+
+            }
+
+
+            /*
+                Stop if data.csv is missing.
+            */
 
             if (!csvFile) {
 
@@ -341,14 +650,116 @@ function prepareGFolder(folderLink) {
                     "in the Google Drive folder."
                 );
 
+                console.error(
+                    "Available CSV files:",
+                    Object.keys(
+                        _googleReturnObj.csvFiles
+                    )
+                );
+
                 return;
             }
 
 
+            console.log(
+                "data.csv URL:",
+                csvFile
+            );
+
+
+            /*
+                Make sure the global folder information
+                is available to makeUrl().
+            */
+
+            _folderInfo = folderLink;
+
+
+            /*
+                Finally load the CSV into Design Explorer.
+            */
+
             readyToLoad(csvFile);
 
         }
+
     );
+
+}
+
+
+/* ============================================================
+   GET URL VARIABLES
+   ============================================================
+
+   This function is required by decodeUrlID().
+   Your current file calls getUrlVars(), but the function
+   was missing from the pasted version.
+   ============================================================ */
+
+function getUrlVars(url) {
+
+    var vars = {};
+
+    url = String(
+        url || window.location.href
+    );
+
+
+    /*
+        Get everything after the ?.
+    */
+
+    var query =
+        url.split("?")[1];
+
+
+    if (!query) {
+        return vars;
+    }
+
+
+    /*
+        Remove anything after #.
+    */
+
+    query =
+        query.split("#")[0];
+
+
+    query.split("&").forEach(
+        function(part) {
+
+            if (!part) {
+                return;
+            }
+
+
+            var pieces =
+                part.split("=");
+
+
+            var key =
+                decodeURIComponent(
+                    pieces[0] || ""
+                );
+
+
+            var value =
+                decodeURIComponent(
+                    pieces.slice(1).join("=") || ""
+                );
+
+
+            if (key) {
+                vars[key] = value;
+            }
+
+        }
+    );
+
+
+    return vars;
 }
 
 
