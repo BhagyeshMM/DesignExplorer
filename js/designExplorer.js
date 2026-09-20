@@ -1,14 +1,25 @@
+/* ============================================================
+   DESIGN EXPLORER 2
+   Google Drive / Apps Script compatible version
+
+   Replace the ENTIRE contents of:
+       js/designExplorer.js
+
+   Google Drive is accessed through the Apps Script proxy.
+   JSONP is used because GitHub Pages cannot XHR directly
+   to a Google Apps Script ContentService endpoint.
+   ============================================================ */
+
+
+/* ============================================================
+   BASIC PAGE FUNCTIONS
+   ============================================================ */
+
 function unloadPageContent() {
-    /*
-        This function removes current contents from the page.
-        Only base HTML objects will remain in the page afterwards.
-    */
 
     overwriteInitialGlobalValues();
 
-    d3.select("div.legend")
-        .selectAll("*")
-        .remove();
+    d3.select("div.legend").selectAll("*").remove();
 
     d3.select("#inputSliders")
         .selectAll("*")
@@ -26,30 +37,30 @@ function unloadPageContent() {
         .selectAll("*")
         .remove();
 
-    d3.select("div#thumbnails-btm_container")
+    d3.select("#thumbnails-btm_container")
         .select("div#sorting")
         .selectAll("*")
         .remove();
 
-    d3.select("div#thumbnails-btm_container")
+    d3.select("#thumbnails-btm_container")
         .select("div#sorting")
         .text("");
 
-    d3.select("div#thumbnails-btm_container")
+    d3.select("#thumbnails-btm_container")
         .select("div#thumbnails-btm")
         .selectAll("*")
         .remove();
 
-    d3.select("div#thumbnails-side_container")
+    d3.select("#thumbnails-side_container")
         .select("div#sorting")
         .selectAll("*")
         .remove();
 
-    d3.select("div#thumbnails-side_container")
+    d3.select("#thumbnails-side_container")
         .select("div#sorting")
         .text("");
 
-    d3.select("div#thumbnails-side_container")
+    d3.select("#thumbnails-side_container")
         .select("div#thumbnails-side")
         .selectAll("*")
         .remove();
@@ -73,29 +84,20 @@ function calWidthAndHeight() {
     cleanWidth = windowWidth - 100;
 
     graphHeight = (cleanHeight / 3) - 24;
-
     zoomedHeight = (cleanHeight * 2 / 3);
 }
 
 
 function overwriteInitialGlobalValues() {
 
-    /*
-        This function initiates all the global values for the page.
-    */
-
     originalData = "";
 
     cleanedData = [];
-
     numericalData = [];
-
     inputData = [];
-
     outputData = [];
 
     slidersInfo = [];
-
     currentSliderValues = {};
 
     allDataCollector = {};
@@ -109,72 +111,50 @@ function overwriteInitialGlobalValues() {
     googleFolderLink = "";
 
     inputDataKeys = [];
-
     outputDataKeys = [];
-
     imageLinkKeys = [];
 
-
     _userSetting = {
-
         studyInfo: {
             name: "",
             date: ""
         },
-
         dimScales: {},
-
         dimTicks: {},
-
         dimMark: {}
     };
 
-
-    rcheight =
-        height =
+    rcheight = height =
         d3.select("#graph")
             .style("height")
             .replace("px", "");
-
 
     selectedDataFormatted = [];
 
     firstRating = true;
 
-
     calWidthAndHeight();
-
 
     pcHeight =
         d3.select("#graph")
             .style("height")
             .replace("px", "");
 
-
     d3.selectAll(".zoomed")
         .style("height", "0px");
 
-
     d3.select("#thumbnails-btm_container")
-        .style(
-            "height",
-            zoomedHeight + "px"
-        );
-
+        .style("height", zoomedHeight + "px");
 
     currentView = "2D";
 
-
     d3.select("input#toggleView")
-        .property("checked", true);
-
+        .property("checked", "true");
 
     initit3DViewer = true;
 
-
     d3.select("#zoomed")
         .classed("hidden", false);
-
 
     d3.select("#viewer3d")
         .classed("hidden", true);
@@ -182,508 +162,485 @@ function overwriteInitialGlobalValues() {
 
 
 /* ============================================================
-   GOOGLE DRIVE FILE OBJECT
+   URL PARAMETERS
    ============================================================ */
 
-var _googleReturnObj = {
+function getUrlVars(rawUrl) {
 
-    csvFiles: {},
+    var vars = {};
 
-    imgFiles: {},
-
-    jsonFiles: {},
-
-    settingFiles: {}
-
-};
-
-
-/* ============================================================
-   GOOGLE DRIVE FOLDER ID
-   ============================================================ */
-
-function getGFolderID(link) {
-
-    link = String(link || "").trim();
-
-
-    var match;
-
-
-    /*
-        Standard folder URL:
-
-        https://drive.google.com/drive/folders/FOLDER_ID
-    */
-
-    match =
-        link.match(
-            /\/folders\/([a-zA-Z0-9_-]+)/
-        );
-
-
-    if (match) {
-        return match[1];
-    }
-
-
-    /*
-        URL with ?id=FOLDER_ID
-    */
-
-    match =
-        link.match(
-            /[?&]id=([a-zA-Z0-9_-]+)/
-        );
-
-
-    if (match) {
-        return match[1];
-    }
-
-
-    /*
-        Folder ID entered directly.
-    */
-
-    if (
-        /^[a-zA-Z0-9_-]{20,}$/.test(link)
-    ) {
-
-        return link;
-
-    }
-
-
-    return "";
-}
-
-
-/* ============================================================
-   CHECK INPUT LINK
-   ============================================================ */
-
-function checkInputLink(link, callback) {
-
-    link =
-        String(link || "").trim();
-
-
-    var folderLinkObj = {
-
-        DE_PW: "",
-
-        inLink: link,
-
-        url: "",
-
-        type: ""
-
-    };
-
-
-    /*
-        GOOGLE DRIVE
-    */
-
-    if (
-
-        link.indexOf(
-            "drive.google.com"
-        ) !== -1
-
-        ||
-
-        /^[a-zA-Z0-9_-]{20,}$/.test(
-            link
-        )
-
-    ) {
-
-        var folderId =
-            getGFolderID(link);
-
-
-        if (!folderId) {
-
-            alert(
-                "Could not read the Google Drive folder ID."
-            );
-
-            return;
+    rawUrl.replace(
+        /[?&]+([^=&]+)=([^&]*)/gi,
+        function (m, key, value) {
+            vars[key] = value;
         }
-
-
-        folderLinkObj.folderId =
-            folderId;
-
-
-        /*
-            The Apps Script endpoint will be
-            called using JSONP.
-        */
-
-        folderLinkObj.url =
-            GOOGLE_DRIVE_PROXY +
-            "?folderId=" +
-            encodeURIComponent(
-                folderId
-            );
-
-
-        folderLinkObj.type =
-            "GoogleDrive";
-
-    }
-
-
-    /*
-        USER SERVER LINK
-    */
-
-    else {
-
-        if (
-            link.slice(-1) !== "/"
-        ) {
-
-            link += "/";
-
-        }
-
-
-        folderLinkObj.url =
-            link;
-
-
-        folderLinkObj.type =
-            "userServerLink";
-
-    }
-
-
-    callback(
-        folderLinkObj
     );
+
+    return vars;
 }
 
 
 /* ============================================================
-   CONFIGURATION
+   KEYS / CONFIGURATION
    ============================================================ */
+
+/*
+   These are retained for compatibility with the original
+   Design Explorer code.
+*/
 
 var Gkey =
     "AIzaSyCSrF08UMawxKIb0m4JsA1mYE5NMmP36bY";
 
-
 var BitlyKey =
     "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
 
+
+/*
+   IMPORTANT:
+
+   This must be the /exec URL of your deployed Apps Script.
+*/
 
 var GOOGLE_DRIVE_PROXY =
     "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
 
 
 /* ============================================================
-   GOOGLE DRIVE JSONP LOADER
+   GOOGLE DRIVE URL HELPERS
    ============================================================ */
 
-function loadGoogleDriveJSONP(
-    url,
-    successCallback,
-    errorCallback
-) {
+function makeDriveImageUrl(fileId) {
+
+    if (!fileId) {
+        return "";
+    }
 
     /*
-        Generate a unique global callback name.
+       This URL is intended for <img src="...">.
+       It does not require the Apps Script proxy.
     */
 
+    return "https://drive.usercontent.google.com/download?id=" +
+        encodeURIComponent(fileId) +
+        "&export=view";
+}
+
+
+function makeDriveDownloadUrl(fileId) {
+
+    if (!fileId) {
+        return "";
+    }
+
+    return "https://drive.usercontent.google.com/download?id=" +
+        encodeURIComponent(fileId) +
+        "&export=download";
+}
+
+
+function makeProxyFileUrl(fileId) {
+
+    if (!fileId) {
+        return "";
+    }
+
+    return GOOGLE_DRIVE_PROXY +
+        "?fileId=" +
+        encodeURIComponent(fileId);
+}
+
+
+function makeProxyJsonpUrl(fileId, callbackName) {
+
+    if (!fileId) {
+        return "";
+    }
+
+    return GOOGLE_DRIVE_PROXY +
+        "?fileId=" +
+        encodeURIComponent(fileId) +
+        "&callback=" +
+        encodeURIComponent(callbackName);
+}
+
+
+/* ============================================================
+   JSONP LOADER
+   ============================================================ */
+
+var designExplorerJsonpCounter = 0;
+
+
+function loadGoogleDriveJSONP(url, successCallback, errorCallback) {
+
+    designExplorerJsonpCounter++;
+
     var callbackName =
-        "__designExplorerGoogleCallback_" +
+        "__designExplorerJSONP_" +
         new Date().getTime() +
         "_" +
-        Math.floor(
-            Math.random() * 100000
-        );
-
+        designExplorerJsonpCounter;
 
     var script =
         document.createElement("script");
 
-
-    var timeout;
-
-
     var finished = false;
 
-
-    /*
-        Cleanup function.
-    */
-
     function cleanup() {
+
+        if (script.parentNode) {
+            script.parentNode.removeChild(script);
+        }
+
+        try {
+            delete window[callbackName];
+        } catch (e) {
+            window[callbackName] = undefined;
+        }
+    }
+
+    window[callbackName] = function (data) {
 
         if (finished) {
             return;
         }
 
-
         finished = true;
-
-
-        if (timeout) {
-
-            clearTimeout(
-                timeout
-            );
-
-        }
-
-
-        try {
-
-            delete window[
-                callbackName
-            ];
-
-        }
-
-        catch (e) {
-
-            window[
-                callbackName
-            ] = undefined;
-
-        }
-
-
-        if (
-            script &&
-            script.parentNode
-        ) {
-
-            script.parentNode.removeChild(
-                script
-            );
-
-        }
-
-    }
-
-
-    /*
-        Callback called by Google Apps Script.
-
-        The Apps Script response will look like:
-
-        __designExplorerGoogleCallback_123({
-            "files":[...]
-        });
-    */
-
-    window[
-        callbackName
-    ] = function(data) {
-
-        console.log(
-            "Google Drive JSONP response:",
-            data
-        );
-
 
         cleanup();
 
-
-        if (
-            typeof successCallback ===
-            "function"
-        ) {
-
-            successCallback(
-                data
-            );
-
+        if (successCallback) {
+            successCallback(data);
         }
-
     };
 
+    script.onerror = function () {
 
-    /*
-        Handle script loading errors.
-    */
+        if (finished) {
+            return;
+        }
 
-    script.onerror =
-        function(error) {
+        finished = true;
 
-            console.error(
-                "Google Drive JSONP request failed:",
-                error
-            );
+        cleanup();
 
-
-            cleanup();
-
-
-            if (
-                typeof errorCallback ===
-                "function"
-            ) {
-
-                errorCallback(
-                    error
-                );
-
-            }
-
-        };
-
-
-    /*
-        Add callback parameter.
-    */
-
-    var separator =
-        url.indexOf("?") === -1
-            ? "?"
-            : "&";
-
-
-    script.src =
-        url +
-        separator +
-        "callback=" +
-        encodeURIComponent(
-            callbackName
+        console.error(
+            "Design Explorer: JSONP request failed:",
+            url
         );
 
+        if (errorCallback) {
+            errorCallback();
+        }
+    };
+
+    if (url.indexOf("?") >= 0) {
+        url += "&callback=" +
+            encodeURIComponent(callbackName);
+    } else {
+        url += "?callback=" +
+            encodeURIComponent(callbackName);
+    }
+
+    script.src = url;
 
     script.async = true;
 
-
-    /*
-        Timeout after 30 seconds.
-    */
-
-    timeout =
-        setTimeout(
-            function() {
-
-                if (finished) {
-                    return;
-                }
-
-
-                console.error(
-                    "Google Drive JSONP request timed out."
-                );
-
-
-                cleanup();
-
-
-                if (
-                    typeof errorCallback ===
-                    "function"
-                ) {
-
-                    errorCallback(
-                        new Error(
-                            "Google Drive JSONP request timed out."
-                        )
-                    );
-
-                }
-
-            },
-            30000
-        );
-
-
-    document
-        .getElementsByTagName("head")[0]
+    document.getElementsByTagName("head")[0]
         .appendChild(script);
 }
 
 
 /* ============================================================
-   PREPARE GOOGLE DRIVE FOLDER
+   PATCH D3 CSV / JSON
+   ============================================================ */
+
+/*
+   The original index.html contains:
+
+       d3.csv(csvFilePathLink, ...)
+
+   and:
+
+       d3.json(jsonFileAddress, ...)
+
+   Those are XMLHttpRequests.
+
+   Google Apps Script is cross-origin from GitHub Pages,
+   therefore those XHR calls can fail.
+
+   We intercept only requests going to our Apps Script proxy
+   and load them through JSONP instead.
+*/
+
+(function installGoogleDriveD3Patch() {
+
+    if (typeof d3 === "undefined") {
+        console.error(
+            "Design Explorer: D3 was not loaded before designExplorer.js."
+        );
+        return;
+    }
+
+    var originalD3Csv = d3.csv;
+    var originalD3Json = d3.json;
+
+
+    /* --------------------------------------------------------
+       d3.csv patch
+       -------------------------------------------------------- */
+
+    d3.csv = function (url, callback) {
+
+        if (
+            typeof url === "string" &&
+            url.indexOf(GOOGLE_DRIVE_PROXY) === 0 &&
+            url.indexOf("fileId=") >= 0
+        ) {
+
+            var fileId =
+                getQueryParameter(url, "fileId");
+
+            if (!fileId) {
+
+                if (callback) {
+                    callback([]);
+                }
+
+                return;
+            }
+
+            loadGoogleDriveJSONP(
+                makeProxyJsonpUrl(
+                    fileId,
+                    "__unused__"
+                ),
+                function (csvText) {
+
+                    try {
+
+                        /*
+                           Apps Script returns the CSV as a
+                           JSON string when callback is supplied.
+                        */
+
+                        if (
+                            typeof csvText !== "string"
+                        ) {
+
+                            csvText =
+                                String(csvText);
+                        }
+
+                        var parsed =
+                            d3.csv.parse(csvText);
+
+                        if (callback) {
+                            callback(parsed);
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "Design Explorer: CSV parsing failed.",
+                            error
+                        );
+
+                        if (callback) {
+                            callback([]);
+                        }
+                    }
+                },
+                function () {
+
+                    console.error(
+                        "Design Explorer: CSV loading failed."
+                    );
+
+                    if (callback) {
+                        callback([]);
+                    }
+                }
+            );
+
+            /*
+               We cannot use the generated callback above
+               because loadGoogleDriveJSONP generates its own
+               callback.
+
+               Return a dummy request-like object.
+            */
+
+            return {
+                abort: function () {}
+            };
+        }
+
+        return originalD3Csv.apply(
+            d3,
+            arguments
+        );
+    };
+
+
+    /* --------------------------------------------------------
+       d3.json patch
+       -------------------------------------------------------- */
+
+    d3.json = function (url, callback) {
+
+        if (
+            typeof url === "string" &&
+            url.indexOf(GOOGLE_DRIVE_PROXY) === 0 &&
+            url.indexOf("fileId=") >= 0
+        ) {
+
+            var fileId =
+                getQueryParameter(url, "fileId");
+
+            if (!fileId) {
+
+                if (callback) {
+                    callback(null);
+                }
+
+                return;
+            }
+
+            loadGoogleDriveJSONP(
+                makeProxyJsonpUrl(
+                    fileId,
+                    "__unused__"
+                ),
+                function (jsonData) {
+
+                    if (callback) {
+                        callback(jsonData);
+                    }
+                },
+                function () {
+
+                    console.error(
+                        "Design Explorer: 3D JSON loading failed:",
+                        fileId
+                    );
+
+                    if (callback) {
+                        callback(null);
+                    }
+                }
+            );
+
+            return {
+                abort: function () {}
+            };
+        }
+
+        return originalD3Json.apply(
+            d3,
+            arguments
+        );
+    };
+
+})();
+
+
+function getQueryParameter(url, parameterName) {
+
+    var escaped =
+        parameterName.replace(
+            /[\[\]]/g,
+            "\\$&"
+        );
+
+    var regex =
+        new RegExp(
+            "[?&]" +
+            escaped +
+            "(=([^&#]*)|&|#|$)"
+        );
+
+    var results =
+        regex.exec(url);
+
+    if (!results) {
+        return null;
+    }
+
+    if (!results[2]) {
+        return "";
+    }
+
+    return decodeURIComponent(
+        results[2].replace(/\+/g, " ")
+    );
+}
+
+
+/* ============================================================
+   GOOGLE DRIVE FOLDER LOADING
    ============================================================ */
 
 function prepareGFolder(folderLink) {
 
-    console.log(
-        "========================================"
-    );
+    if (!folderLink) {
+
+        alert(
+            "Design Explorer: Google Drive folder information is missing."
+        );
+
+        return;
+    }
+
+
+    /*
+       Reset the object.
+    */
+
+    _googleReturnObj = {
+        csvFiles: {},
+        imgFiles: {},
+        jsonFiles: {},
+        settingFiles: {}
+    };
+
+
+    var folder = {
+
+        DE_PW: "",
+
+        inLink: "",
+
+        url: "",
+
+        type: ""
+    };
+
+
+    folder = folderLink;
+
 
     console.log(
-        "Design Explorer Google Drive loader"
-    );
-
-    console.log(
-        "Folder ID:",
-        folderLink.folderId
+        "Design Explorer: loading Google Drive folder..."
     );
 
     console.log(
         "Proxy:",
-        folderLink.url
+        folder.url
     );
 
-    console.log(
-        "========================================"
-    );
-
-
-    /*
-        Reset file maps.
-    */
-
-    _googleReturnObj = {
-
-        csvFiles: {},
-
-        imgFiles: {},
-
-        jsonFiles: {},
-
-        settingFiles: {}
-
-    };
-
-
-    /*
-        Use JSONP instead of d3.json().
-
-        d3.json() performs XMLHttpRequest.
-        Google Apps Script ContentService is
-        cross-origin, so JSONP avoids the XHR/CORS
-        problem.
-    */
 
     loadGoogleDriveJSONP(
 
-        folderLink.url,
+        folder.url,
 
-        function(data) {
-
-            console.log(
-                "Google Drive data received."
-            );
-
-
-            /*
-                Validate response.
-            */
+        function (data) {
 
             if (!data) {
 
                 alert(
-                    "Google Drive loading failed: " +
-                    "The proxy returned no data."
-                );
-
-                console.error(
-                    "Google Drive JSONP returned no data."
+                    "Google Drive loading failed: The proxy returned no data."
                 );
 
                 return;
@@ -691,332 +648,226 @@ function prepareGFolder(folderLink) {
 
 
             /*
-                Apps Script error.
+               Some Apps Script versions may return:
+
+                   { files: [...] }
+
+               Make sure files is always an array.
             */
 
-            if (data.error) {
+            var files = [];
 
-                alert(
-                    "Google Drive loading failed: " +
-                    data.error
-                );
-
-                console.error(
-                    "Google Drive proxy error:",
-                    data.error
-                );
-
-                return;
-            }
-
-
-            /*
-                Validate files array.
-            */
-
-            if (
-                !Array.isArray(
-                    data.files
-                )
-            ) {
-
-                alert(
-                    "Google Drive loading failed: " +
-                    "The proxy response does not contain a files array."
-                );
-
-                console.error(
-                    "Invalid Google Drive response:",
-                    data
-                );
-
-                return;
+            if (Array.isArray(data.files)) {
+                files = data.files;
             }
 
 
             console.log(
-                "Google Drive files returned:",
-                data.files.length
+                "Design Explorer: files received:",
+                files.length
             );
 
 
-            /*
-                Process files.
-            */
+            files.forEach(function (item) {
 
-            data.files.forEach(
-                function(item) {
-
-                    if (!item) {
-                        return;
-                    }
-
-
-                    var name =
-                        String(
-                            item.name || ""
-                        ).trim();
-
-
-                    var lowerName =
-                        name.toLowerCase();
-
-
-                    var fileUrl =
-                        String(
-                            item.url || ""
-                        ).trim();
-
-
-                    var mimeType =
-                        String(
-                            item.mimeType || ""
-                        ).toLowerCase();
-
-
-                    /*
-                        Skip invalid entries.
-                    */
-
-                    if (
-                        !name ||
-                        !fileUrl
-                    ) {
-
-                        console.warn(
-                            "Skipping invalid file:",
-                            item
-                        );
-
-                        return;
-                    }
-
-
-                    /*
-                        CSV
-                    */
-
-                    if (
-                        lowerName.endsWith(
-                            ".csv"
-                        )
-                    ) {
-
-                        _googleReturnObj
-                            .csvFiles[name] =
-                            fileUrl;
-
-                    }
-
-
-                    /*
-                        IMAGE
-                    */
-
-                    else if (
-
-                        mimeType.indexOf(
-                            "image/"
-                        ) === 0
-
-                        ||
-
-                        /\.(png|jpg|jpeg|gif|webp)$/i
-                            .test(name)
-
-                    ) {
-
-                        _googleReturnObj
-                            .imgFiles[name] =
-                            fileUrl;
-
-                    }
-
-
-                    /*
-                        JSON
-                    */
-
-                    else if (
-
-                        mimeType ===
-                            "application/json"
-
-                        ||
-
-                        lowerName.endsWith(
-                            ".json"
-                        )
-
-                    ) {
-
-                        /*
-                            Settings files.
-                        */
-
-                        if (
-                            lowerName.indexOf(
-                                "setting"
-                            ) === 0
-                        ) {
-
-                            _googleReturnObj
-                                .settingFiles[name] =
-                                fileUrl;
-
-                        }
-
-
-                        /*
-                            3D model files.
-                        */
-
-                        else {
-
-                            _googleReturnObj
-                                .jsonFiles[name] =
-                                fileUrl;
-
-                        }
-
-                    }
-
+                if (!item) {
+                    return;
                 }
-            );
 
 
-            /* =====================================================
-               FILE MAP DIAGNOSTICS
-               ===================================================== */
+                var name =
+                    item.name || "";
+
+
+                var fileId =
+                    item.id || item.fileId || "";
+
+
+                var mimeType =
+                    item.mimeType || "";
+
+
+                if (!name || !fileId) {
+                    return;
+                }
+
+
+                /*
+                   Normalize filename for matching.
+                */
+
+                var lowerName =
+                    name.toLowerCase();
+
+
+                /*
+                   IMAGE
+                */
+
+                if (
+                    mimeType.indexOf("image/") === 0 ||
+                    lowerName.match(
+                        /\.(png|jpg|jpeg|gif|webp)$/i
+                    )
+                ) {
+
+                    _googleReturnObj.imgFiles[name] =
+                        makeDriveImageUrl(fileId);
+
+                    return;
+                }
+
+
+                /*
+                   CSV
+                */
+
+                if (
+                    mimeType === "text/csv" ||
+                    lowerName.endsWith(".csv")
+                ) {
+
+                    _googleReturnObj.csvFiles[name] =
+                        makeProxyFileUrl(fileId);
+
+                    return;
+                }
+
+
+                /*
+                   JSON
+                */
+
+                if (
+                    mimeType === "application/json" ||
+                    lowerName.endsWith(".json")
+                ) {
+
+                    var jsonUrl =
+                        makeProxyFileUrl(fileId);
+
+
+                    /*
+                       Design Explorer convention:
+                       files beginning with "setting"
+                       are settings.
+                    */
+
+                    if (
+                        lowerName.indexOf("setting") === 0
+                    ) {
+
+                        _googleReturnObj.settingFiles[name] =
+                            jsonUrl;
+
+                    } else {
+
+                        _googleReturnObj.jsonFiles[name] =
+                            jsonUrl;
+                    }
+
+                    return;
+                }
+
+            });
+
 
             console.log(
-                "========================================"
-            );
-
-            console.log(
-                "Design Explorer Google Drive file map"
-            );
-
-            console.log(
-                "CSV count:",
+                "Design Explorer: CSV files:",
                 Object.keys(
                     _googleReturnObj.csvFiles
-                ).length
+                )
             );
 
             console.log(
-                "Image count:",
+                "Design Explorer: image files:",
                 Object.keys(
                     _googleReturnObj.imgFiles
                 ).length
             );
 
             console.log(
-                "3D JSON count:",
+                "Design Explorer: 3D JSON files:",
                 Object.keys(
                     _googleReturnObj.jsonFiles
                 ).length
             );
 
-            console.log(
-                "Setting count:",
-                Object.keys(
-                    _googleReturnObj.settingFiles
-                ).length
-            );
-
-            console.log(
-                "CSV files:",
-                _googleReturnObj.csvFiles
-            );
-
-            console.log(
-                "Image files:",
-                _googleReturnObj.imgFiles
-            );
-
-            console.log(
-                "3D JSON files:",
-                _googleReturnObj.jsonFiles
-            );
-
-            console.log(
-                "Setting files:",
-                _googleReturnObj.settingFiles
-            );
-
-            console.log(
-                "========================================"
-            );
-
-
-            /* =====================================================
-               FIND DATA.CSV
-               ===================================================== */
-
-            var csvFile =
-                null;
-
 
             /*
-                Exact data.csv.
+               Pagination
             */
 
-            if (
-                _googleReturnObj
-                    .csvFiles["data.csv"]
-            ) {
+            if (data.nextPageToken) {
 
-                csvFile =
-                    _googleReturnObj
-                        .csvFiles["data.csv"];
+                var separator =
+                    folder.url.indexOf("?") >= 0
+                        ? "&"
+                        : "?";
 
+                var nextUrl =
+                    folder.url +
+                    separator +
+                    "pageToken=" +
+                    encodeURIComponent(
+                        data.nextPageToken
+                    );
+
+                folder.url = nextUrl;
+
+                prepareGFolder(folder);
+
+                return;
             }
 
 
             /*
-                Case-insensitive fallback.
+               Find data.csv.
+            */
+
+            var csvFile =
+                _googleReturnObj.csvFiles["data.csv"];
+
+
+            /*
+               Some datasets use DATA.CSV.
+               Search case-insensitively if exact
+               data.csv was not found.
             */
 
             if (!csvFile) {
 
-                Object.keys(
-                    _googleReturnObj.csvFiles
-                ).some(
-                    function(filename) {
+                var csvNames =
+                    Object.keys(
+                        _googleReturnObj.csvFiles
+                    );
 
-                        if (
-                            filename.toLowerCase() ===
-                            "data.csv"
-                        ) {
+                for (
+                    var i = 0;
+                    i < csvNames.length;
+                    i++
+                ) {
 
-                            csvFile =
-                                _googleReturnObj
-                                    .csvFiles[
-                                        filename
-                                    ];
+                    if (
+                        csvNames[i].toLowerCase() ===
+                        "data.csv"
+                    ) {
 
-                            return true;
-                        }
+                        csvFile =
+                            _googleReturnObj.csvFiles[
+                                csvNames[i]
+                            ];
 
-
-                        return false;
-
+                        break;
                     }
-                );
-
+                }
             }
 
-
-            /*
-                data.csv missing.
-            */
 
             if (!csvFile) {
 
                 alert(
-                    "Could not find data.csv " +
-                    "in the Google Drive folder."
+                    "Could not find data.csv in the Google Drive folder."
                 );
 
                 console.error(
@@ -1031,139 +882,44 @@ function prepareGFolder(folderLink) {
 
 
             console.log(
-                "data.csv URL:",
+                "Design Explorer: loading:",
                 csvFile
             );
 
 
-            /*
-                Keep the folder information globally
-                available to index.html.
-            */
-
-            _folderInfo =
-                folderLink;
-
-
-            /*
-                Start Design Explorer.
-            */
-
-            readyToLoad(
-                csvFile
-            );
-
+            readyToLoad(csvFile);
         },
 
-
-        function(error) {
+        function () {
 
             alert(
-                "Google Drive loading failed: " +
-                "The Apps Script JSONP request could not be completed."
+                "Google Drive loading failed. " +
+                "The Apps Script proxy could not be reached."
             );
-
 
             console.error(
-                "Google Drive JSONP error:",
-                error
+                "Design Explorer: unable to load proxy:",
+                folder.url
             );
-
         }
-
     );
 }
 
 
 /* ============================================================
-   URL PARAMETER PARSER
-   ============================================================ */
-
-function getUrlVars(url) {
-
-    var vars = {};
-
-
-    url =
-        String(
-            url ||
-            window.location.href
-        );
-
-
-    var query =
-        url.split("?")[1];
-
-
-    if (!query) {
-        return vars;
-    }
-
-
-    query =
-        query.split("#")[0];
-
-
-    query.split("&")
-        .forEach(
-            function(part) {
-
-                if (!part) {
-                    return;
-                }
-
-
-                var pieces =
-                    part.split("=");
-
-
-                var key =
-                    decodeURIComponent(
-                        pieces[0] || ""
-                    );
-
-
-                var value =
-                    decodeURIComponent(
-                        pieces
-                            .slice(1)
-                            .join("=") ||
-                        ""
-                    );
-
-
-                if (key) {
-
-                    vars[key] =
-                        value;
-
-                }
-
-            }
-        );
-
-
-    return vars;
-}
-
-
-/* ============================================================
-   LOAD GOOGLE ID AND DATA
+   LOAD FROM GOOGLE DRIVE / URL
    ============================================================ */
 
 function MP_getGoogleIDandLoad(dataMethod) {
 
     var serverFolderLink;
 
-
     document.getElementById(
         "csv-file"
     ).value = "";
 
 
-    if (
-        dataMethod === "URL"
-    ) {
+    if (dataMethod === "URL") {
 
         document.getElementById(
             "folderLink"
@@ -1175,20 +931,14 @@ function MP_getGoogleIDandLoad(dataMethod) {
 
 
         decodeUrlID(
-
             inUrl,
-
-            function(d) {
+            function (d) {
 
                 loadFromUrl(d);
-
             }
-
         );
 
-    }
-
-    else {
+    } else {
 
         serverFolderLink =
             document.getElementById(
@@ -1199,25 +949,34 @@ function MP_getGoogleIDandLoad(dataMethod) {
         loadFromUrl(
             serverFolderLink
         );
-
     }
 }
 
 
-/* ============================================================
-   LOAD FROM URL
-   ============================================================ */
-
 function loadFromUrl(rawUrl) {
 
-    checkInputLink(
+    if (!rawUrl) {
 
+        alert(
+            "Please enter a Google Drive folder URL."
+        );
+
+        return;
+    }
+
+
+    checkInputLink(
         rawUrl,
 
-        function(d) {
+        function (d) {
 
-            _folderInfo =
-                d;
+            _folderInfo = d;
+
+
+            console.log(
+                "Design Explorer folder info:",
+                d
+            );
 
 
             if (
@@ -1225,44 +984,27 @@ function loadFromUrl(rawUrl) {
                 "userServerLink"
             ) {
 
-                /*
-                    Normal user server.
-                */
-
                 readyToLoad(
                     d.url +
                     "data.csv"
                 );
 
+            } else {
+
+                prepareGFolder(d);
             }
-
-            else {
-
-                /*
-                    Google Drive.
-                */
-
-                prepareGFolder(
-                    d
-                );
-
-            }
-
         }
-
     );
 }
 
 
 /* ============================================================
-   CHANGE LABEL SIZE
+   LABEL SIZE
    ============================================================ */
 
 function changeLabelSize(size) {
 
-    if (
-        size == "largeLabel"
-    ) {
+    if (size === "largeLabel") {
 
         d3.selectAll(".label")
             .style(
@@ -1270,11 +1012,7 @@ function changeLabelSize(size) {
                 "95%"
             );
 
-    }
-
-    else if (
-        size == "mediumLabel"
-    ) {
+    } else if (size === "mediumLabel") {
 
         d3.selectAll(".label")
             .style(
@@ -1282,38 +1020,237 @@ function changeLabelSize(size) {
                 "85%"
             );
 
-    }
-
-    else if (
-        size == "smallLabel"
-    ) {
+    } else if (size === "smallLabel") {
 
         d3.selectAll(".label")
             .style(
                 "font-size",
                 "75%"
             );
-
     }
 }
 
 
 /* ============================================================
-   ENCODE URL
+   CHECK INPUT LINK
    ============================================================ */
 
-function encodeUrl(url) {
+function checkInputLink(
+    link,
+    callback
+) {
 
-    var link =
-        btoa(url);
+    var folderLinkObj = {
 
-    return link;
+        DE_PW: "",
+
+        inLink: "",
+
+        url: "",
+
+        type: ""
+    };
+
+
+    if (
+        link &&
+        (
+            link.indexOf("google.com") >= 0 ||
+            link.indexOf("drive.google") >= 0
+        )
+    ) {
+
+        var GFolderID =
+            getGFolderID(link);
+
+
+        if (!GFolderID) {
+
+            alert(
+                "Could not find the Google Drive folder ID."
+            );
+
+            return;
+        }
+
+
+        /*
+           IMPORTANT:
+
+           Do NOT use:
+             googleapis.com/drive/v3/files
+
+           The Apps Script proxy lists the files.
+        */
+
+        folderLinkObj.url =
+            GOOGLE_DRIVE_PROXY +
+            "?folderId=" +
+            encodeURIComponent(
+                GFolderID
+            );
+
+
+        folderLinkObj.type =
+            "GoogleDrive";
+
+
+    } else if (
+        link &&
+        link.indexOf("1drv.ms") >= 0
+    ) {
+
+        folderLinkObj.url =
+            "https://api.onedrive.com/v1.0/shares/u!" +
+            encodeUrl(link) +
+            "/root?expand=children";
+
+        folderLinkObj.type =
+            "OneDrive";
+
+    } else {
+
+        if (
+            link.slice(-1) !== "/"
+        ) {
+
+            link += "/";
+        }
+
+        folderLinkObj.url =
+            link;
+
+        folderLinkObj.type =
+            "userServerLink";
+    }
+
+
+    folderLinkObj.inLink =
+        link;
+
+
+    callback(
+        folderLinkObj
+    );
 }
 
 
 /* ============================================================
-   DECODE URL
+   GOOGLE DRIVE FOLDER ID
    ============================================================ */
+
+function getGFolderID(link) {
+
+    if (!link) {
+        return "";
+    }
+
+
+    var cleanLink =
+        link.trim();
+
+
+    /*
+       /folders/FOLDER_ID
+    */
+
+    var folderMatch =
+        cleanLink.match(
+            /\/folders\/([a-zA-Z0-9_-]+)/
+        );
+
+
+    if (folderMatch) {
+
+        return folderMatch[1];
+    }
+
+
+    /*
+       ?id=FOLDER_ID
+    */
+
+    var idMatch =
+        cleanLink.match(
+            /[?&]id=([a-zA-Z0-9_-]+)/
+        );
+
+
+    if (idMatch) {
+
+        return idMatch[1];
+    }
+
+
+    /*
+       Raw folder ID.
+    */
+
+    if (
+        /^[a-zA-Z0-9_-]+$/.test(
+            cleanLink
+        )
+    ) {
+
+        return cleanLink;
+    }
+
+
+    /*
+       Last fallback:
+       take the last non-empty URL component.
+    */
+
+    var parts =
+        cleanLink.split("/");
+
+
+    while (
+        parts.length &&
+        parts[parts.length - 1] === ""
+    ) {
+
+        parts.pop();
+    }
+
+
+    if (parts.length) {
+
+        var last =
+            parts[parts.length - 1];
+
+
+        if (
+            /^[a-zA-Z0-9_-]+$/.test(
+                last
+            )
+        ) {
+
+            return last;
+        }
+    }
+
+
+    return "";
+}
+
+
+/* ============================================================
+   URL ENCODE / DECODE
+   ============================================================ */
+
+function encodeUrl(url) {
+
+    try {
+
+        return btoa(url);
+
+    } catch (e) {
+
+        return url;
+    }
+}
+
 
 function decodeUrl(encodedString) {
 
@@ -1323,34 +1260,30 @@ function decodeUrl(encodedString) {
     try {
 
         url =
-            atob(
-                encodedString
-            );
+            atob(encodedString);
 
-    }
-
-    catch(err) {
+    } catch (err) {
 
         console.log(
             err.message +
-            " But fixed:>"
+            " But fixed:"
         );
 
 
-        url =
-            atob(
-                encodedString
-                    .replace(
-                        "_",
-                        "/"
-                    )
-                    .replace(
-                        "-",
-                        "+"
-                    ) +
-                "="
-            );
+        try {
 
+            url =
+                atob(
+                    encodedString
+                        .replace("_", "/")
+                        .replace("-", "+") +
+                    "="
+                );
+
+        } catch (e) {
+
+            url = "";
+        }
     }
 
 
@@ -1359,7 +1292,7 @@ function decodeUrl(encodedString) {
 
 
 /* ============================================================
-   COPY TO CLIPBOARD
+   CLIPBOARD
    ============================================================ */
 
 function CopyToClipboard(element) {
@@ -1369,9 +1302,7 @@ function CopyToClipboard(element) {
 
 
     $("body")
-        .append(
-            $temp
-        );
+        .append($temp);
 
 
     $temp
@@ -1391,7 +1322,7 @@ function CopyToClipboard(element) {
 
 
 /* ============================================================
-   BITLY URL CREATION
+   BITLY
    ============================================================ */
 
 function makeUrlId(
@@ -1405,8 +1336,7 @@ function makeUrlId(
 
     $.ajax({
 
-        type:
-            "POST",
+        type: "POST",
 
         contentType:
             "application/json",
@@ -1416,10 +1346,8 @@ function makeUrlId(
 
         data:
             JSON.stringify({
-
-                "long_url":
+                long_url:
                     longUrl
-
             }),
 
         headers: {
@@ -1429,62 +1357,50 @@ function makeUrlId(
 
             "Content-Type":
                 "application/json"
-
         },
 
         error:
-            function(e) {
+            function () {
 
                 callback(
                     encodeUrl(
                         longUrl
                     )
                 );
-
             },
 
         dataType:
             "json",
 
         success:
-            function(response) {
+            function (response) {
 
-                var UrlID =
-                    "";
+                var UrlId = "";
 
 
                 if (
                     response.id != null
                 ) {
 
-                    UrlID =
-                        response.id.split(
-                            "/"
-                        );
+                    UrlId =
+                        response.id
+                            .split("/");
 
-
-                    UrlID =
-                        UrlID[
-                            UrlID.length - 1
+                    UrlId =
+                        UrlId[
+                            UrlId.length - 1
                         ];
-
                 }
 
 
                 callback(
                     "BL_" +
-                    UrlID
+                    UrlId
                 );
-
             }
-
     });
 }
 
-
-/* ============================================================
-   GET BITLY URL
-   ============================================================ */
 
 function getUrlID(
     urlID,
@@ -1505,47 +1421,41 @@ function getUrlID(
         data:
             JSON.stringify({
 
-                "bitlink_id":
+                bitlink_id:
                     "bit.ly/" +
                     urlID
-
             }),
 
         headers: {
 
             "Authorization":
                 BitlyKey
-
         },
 
         contentType:
             "application/json",
 
         success:
-            function(result) {
+            function (result) {
 
                 callback(
                     result.long_url
                 );
-
             },
 
         error:
-            function(error) {
+            function () {
 
                 console.error(
-                    "Bitly expand failed:",
-                    error
+                    "Bitly expansion failed."
                 );
-
             }
-
     });
 }
 
 
 /* ============================================================
-   DECODE URL ID
+   DECODE DESIGN EXPLORER URL
    ============================================================ */
 
 function decodeUrlID(
@@ -1555,7 +1465,6 @@ function decodeUrlID(
 
     var serverFolderLink =
         "";
-
 
     var urlVars =
         getUrlVars(
@@ -1571,32 +1480,26 @@ function decodeUrlID(
         urlVars.ID;
 
 
-    /* =========================================================
-       OLD GFOLDER FORMAT
-       ========================================================= */
+    /*
+       Old GFOLDER link
+    */
 
     if (
-        GfolderORUrl !==
-        undefined
+        GfolderORUrl !== undefined
     ) {
 
         if (
-            GfolderORUrl.search(
-                "/"
-            ) == -1
+            GfolderORUrl.search("/") === -1
         ) {
 
             serverFolderLink =
                 "https://drive.google.com/drive/folders/" +
                 GfolderORUrl;
 
-        }
-
-        else {
+        } else {
 
             serverFolderLink =
                 GfolderORUrl;
-
         }
 
 
@@ -1604,14 +1507,16 @@ function decodeUrlID(
             serverFolderLink
         );
 
+
+        return;
     }
 
 
-    /* =========================================================
-       ID FORMAT
-       ========================================================= */
+    /*
+       ID link
+    */
 
-    else if (
+    if (
         DEID !== undefined
     ) {
 
@@ -1620,7 +1525,7 @@ function decodeUrlID(
 
 
         /*
-            Old goo.gl format.
+           Old goo.gl ID.
         */
 
         if (
@@ -1628,40 +1533,14 @@ function decodeUrlID(
         ) {
 
             d3.json(
-
                 "https://www.googleapis.com/urlshortener/v1/url?key=" +
                 Gkey +
                 "&shortUrl=http://goo.gl/" +
                 linkID,
 
-                function(error, d) {
+                function (d) {
 
-                    /*
-                        Support both old D3 callback
-                        forms.
-                    */
-
-                    if (
-                        arguments.length === 1
-                    ) {
-
-                        d = error;
-                        error = null;
-
-                    }
-
-
-                    if (
-                        error ||
-                        !d ||
-                        !d.longUrl
-                    ) {
-
-                        console.error(
-                            "Could not expand Google short URL:",
-                            error || d
-                        );
-
+                    if (!d) {
                         return;
                     }
 
@@ -1670,17 +1549,6 @@ function decodeUrlID(
                         getUrlVars(
                             d.longUrl
                         ).ID;
-
-
-                    if (!GID) {
-
-                        console.error(
-                            "Could not extract ID from:",
-                            d.longUrl
-                        );
-
-                        return;
-                    }
 
 
                     serverFolderLink =
@@ -1692,57 +1560,26 @@ function decodeUrlID(
                     callback(
                         serverFolderLink
                     );
-
                 }
             );
 
-        }
 
-
-        /*
-            Bitly format.
-        */
-
-        else if (
-            linkID.startsWith(
-                "BL_"
-            )
+        } else if (
+            linkID.indexOf("BL_") === 0
         ) {
 
             getUrlID(
-
                 linkID.replace(
                     "BL_",
                     ""
                 ),
 
-                function(d) {
-
-                    if (!d) {
-
-                        console.error(
-                            "Bitly did not return a URL."
-                        );
-
-                        return;
-                    }
-
+                function (d) {
 
                     var GID =
                         getUrlVars(
                             d
                         ).ID;
-
-
-                    if (!GID) {
-
-                        console.error(
-                            "Could not extract ID from:",
-                            d
-                        );
-
-                        return;
-                    }
 
 
                     serverFolderLink =
@@ -1754,18 +1591,11 @@ function decodeUrlID(
                     callback(
                         serverFolderLink
                     );
-
                 }
             );
 
-        }
 
-
-        /*
-            Direct encoded URL.
-        */
-
-        else {
+        } else {
 
             serverFolderLink =
                 decodeUrl(
@@ -1776,18 +1606,18 @@ function decodeUrlID(
             callback(
                 serverFolderLink
             );
-
         }
 
+
+        return;
     }
 
 
-    else {
+    /*
+       Nothing found.
+    */
 
-        console.warn(
-            "No GFOLDER or ID parameter found:",
-            rawUrl
-        );
-
-    }
+    console.warn(
+        "Design Explorer: no GFOLDER or ID parameter found."
+    );
 }
