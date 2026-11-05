@@ -1,3 +1,12 @@
+/*
+ * designExplorer.js – key-free Google Drive version
+ * Changes vs. the previous file:
+ *  - removed the Google API key and Bitly token (and the goo.gl / Bitly code that used them)
+ *  - folder listing goes through the Apps Script proxy only, with retries and clear error messages
+ *  - data.csv is fetched with retries and passed to the viewer as a cleaned local blob
+ *  - image / 3D-json lookups tolerate different letter case and a missing file extension
+ *  - static links (?ID=...) are url-safe base64 of the folder link; old ids still decode
+ */
 function unloadPageContent() {
     /*
     	// This function removes current contents from the page
@@ -254,6 +263,26 @@ function tolerantMap(map) {
     });
 }
 
+// Drive thumbnail width in pixels (smaller = faster and less likely to be throttled by Google)
+var DRIVE_IMG_WIDTH = 600;
+
+// Google resets connections (net::ERR_CONNECTION_RESET) when hundreds of thumbnails are requested at once.
+// Any Drive thumbnail that fails is quietly retried a few times, spread out with a random delay.
+(function () {
+    var MAX_TRIES = 5;
+    document.addEventListener("error", function (e) {
+        var img = e.target;
+        if (!img || img.tagName !== "IMG" || !/drive\.google\.com\/thumbnail/.test(img.src)) { return; }
+        var n = (+img.getAttribute("data-retry") || 0) + 1;
+        if (n > MAX_TRIES) { return; }
+        img.setAttribute("data-retry", n);
+        var base = img.src.replace(/([?&])_r=\d+&?/, "$1").replace(/[?&]$/, "");
+        setTimeout(function () {
+            img.src = base + (base.indexOf("?") < 0 ? "?" : "&") + "_r=" + n;
+        }, 700 * n + Math.random() * 2500);
+    }, true);
+})();
+
 function prepareGFolder(folderLink) {
 
     var maps = { csvFiles: {}, imgFiles: {}, jsonFiles: {}, settingFiles: {} };
@@ -275,7 +304,7 @@ function prepareGFolder(folderLink) {
 
                 } else if ((item.mimeType || "").indexOf("image/") === 0 ||
                     /\.(png|jpg|jpeg|gif|webp)$/i.test(name)) {
-                    maps.imgFiles[name] = fileUrl;
+                    maps.imgFiles[name] = String(fileUrl).replace(/([?&]sz=)w\d+/i, "$1w" + DRIVE_IMG_WIDTH);
 
                 } else if ((item.mimeType || "") === "application/json" || lower.endsWith(".json")) {
                     if (lower.indexOf("setting") === 0) {
