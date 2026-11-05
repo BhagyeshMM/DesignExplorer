@@ -208,145 +208,105 @@ function checkInputLink(link, callback) {
 
     callback(folderLinkObj);
 }
+/*
+ * No API keys live in this file.
+ * Drive folders are read through a Google Apps Script web app (see drive-proxy.gs):
+ *   GET <proxy>?folderId=ID  ->  { files: [ { name, mimeType, url } ] }
+ */
 var GOOGLE_DRIVE_PROXY = "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
+
+function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+}
+
+// fetch with 3 tries (rate limits / hiccups) and errors that name the file
+function fetchWithRetry(url, asJson, label) {
+    var attempt = 0;
+    function go() {
+        attempt++;
+        return fetch(url).then(function (r) {
+            if (r.ok) { return asJson ? r.json() : r.text(); }
+            if ((r.status === 429 || r.status >= 500) && attempt < 3) { return wait(600 * attempt).then(go); }
+            throw new Error(label + ": HTTP " + r.status);
+        }, function (e) {
+            if (attempt < 3) { return wait(600 * attempt).then(go); }
+            throw new Error(label + ": network/CORS error (" + e.message + ")");
+        });
+    }
+    return go();
+}
+
+// lookups by file name also work with different letter case or without the extension
+function tolerantMap(map) {
+    var index = {};
+    Object.keys(map).forEach(function (n) {
+        var l = n.toLowerCase(), b = l.replace(/\.[^.]+$/, "");
+        index[l] = map[n];
+        if (!(b in index)) { index[b] = map[n]; }
+    });
+    if (typeof Proxy === "undefined") { return map; }
+    return new Proxy(map, {
+        get: function (t, k) {
+            if (typeof k !== "string" || k in t) { return t[k]; }
+            var l = k.toLowerCase();
+            return index[l] !== undefined ? index[l] : index[l.replace(/\.[^.]+$/, "")];
+        }
+    });
+}
 
 function prepareGFolder(folderLink) {
 
-    googleReturnObj = {
+    var maps = { csvFiles: {}, imgFiles: {}, jsonFiles: {}, settingFiles: {} };
 
-        csvFiles: {},
-
-        imgFiles: {},
-
-        jsonFiles: {},
-
-        settingFiles: {}
-
-    };
-
-
-    d3.json(
-        folderLink.url,
-        function(data) {
-
+    fetchWithRetry(folderLink.url, true, "Google Drive folder listing")
+        .then(function (data) {
 
             if (!data || data.error) {
-
-                var msg =
-                    data && data.error
-                        ? data.error
-                        : "Unknown error";
-
-
-                alert(
-                    "Google Drive loading failed: " +
-                    msg
-                );
-
-                return;
+                throw new Error(data && data.error ? data.error : "Unknown error");
             }
 
+            (data.files || []).forEach(function (item) {
+                var name = item.name || "";
+                var lower = name.toLowerCase();
+                var fileUrl = item.url;
 
-            (data.files || [])
-                .forEach(function(item) {
+                if (lower.endsWith(".csv")) {
+                    maps.csvFiles[name] = fileUrl;
 
-                    var name =
-                        item.name || "";
+                } else if ((item.mimeType || "").indexOf("image/") === 0 ||
+                    /\.(png|jpg|jpeg|gif|webp)$/i.test(name)) {
+                    maps.imgFiles[name] = fileUrl;
 
-                    var lower =
-                        name.toLowerCase();
-
-                    var fileUrl =
-                        item.url;
-
-
-                    // CSV
-                    if (
-                        lower.endsWith(".csv")
-                    ) {
-
-                        googleReturnObj
-                            .csvFiles[name] =
-                            fileUrl;
+                } else if ((item.mimeType || "") === "application/json" || lower.endsWith(".json")) {
+                    if (lower.indexOf("setting") === 0) {
+                        maps.settingFiles[name] = fileUrl;
+                    } else {
+                        maps.jsonFiles[name] = fileUrl;
                     }
+                }
+            });
 
-
-                    // IMAGE
-                    else if (
-
-                        (item.mimeType || "")
-                            .indexOf("image/") === 0
-
-                        ||
-
-                        /\.(png|jpg|jpeg|gif|webp)$/i
-                            .test(name)
-
-                    ) {
-
-                        googleReturnObj
-                            .imgFiles[name] =
-                            fileUrl;
-                    }
-
-
-                    // JSON
-                    else if (
-
-                        (item.mimeType || "") ===
-                            "application/json"
-
-                        ||
-
-                        lower.endsWith(".json")
-
-                    ) {
-
-                        if (
-                            lower.indexOf(
-                                "setting"
-                            ) === 0
-                        ) {
-
-                            googleReturnObj
-                                .settingFiles[name] =
-                                fileUrl;
-
-                        } else {
-
-                            googleReturnObj
-                                .jsonFiles[name] =
-                                fileUrl;
-                        }
-                    }
-
-                });
-
-
-            _googleReturnObj =
-                googleReturnObj;
-
-
-            var csvFile =
-                googleReturnObj
-                    .csvFiles["data.csv"];
-
-
-            if (!csvFile) {
-
-                alert(
-                    "Could not find data.csv " +
-                    "in the Google Drive folder."
-                );
-
-                return;
+            var csvName = maps.csvFiles["data.csv"] ? "data.csv" : Object.keys(maps.csvFiles)[0];
+            if (!csvName) {
+                throw new Error("Could not find data.csv in the Google Drive folder (" + (data.files || []).length + " files listed).");
             }
 
+            maps.imgFiles = tolerantMap(maps.imgFiles);
+            maps.jsonFiles = tolerantMap(maps.jsonFiles);
+            window.googleReturnObj = maps;
+            _googleReturnObj = maps;
 
-            readyToLoad(csvFile);
-
-        }
-    );
+            return fetchWithRetry(maps.csvFiles[csvName], false, csvName);
+        })
+        .then(function (csvText) {
+            // hand the cleaned csv to the viewer as a local blob (drops a UTF-8 BOM that breaks the first column name)
+            var blob = new Blob([csvText.replace(/^\uFEFF/, "")], { type: "text/csv" });
+            readyToLoad(URL.createObjectURL(blob));
+        })
+        .catch(function (e) {
+            console.error(e);
+            alert("Google Drive loading failed: " + e.message);
+        });
 }
 
 
@@ -408,22 +368,20 @@ function changeLabelSize(size) {
 }
 
 function encodeUrl(url) {
-    // var link = btoa(url).slice(0, -1).replace('/','_').replace('+','-');
-    var link = btoa(url);
-    return link;
+    // url-safe base64 without padding, so the id survives inside ?ID=...
+    return btoa(url).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function decodeUrl(encodedString) {
-    // var url = atob(encodedString.replace('_','/').replace('-','+')+"=");
-    var url = "";
-    try{
-        url = atob(encodedString);
-    }catch(err) {
-        console.log(err.message+" But fixed:>");
-        url = atob(encodedString.replace('_','/').replace('-','+')+"=");
+    // accepts old (plain base64) and new (url-safe) ids
+    var s = String(encodedString).replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) { s += "="; }
+    try {
+        return atob(s);
+    } catch (err) {
+        console.log("Could not decode the study id: " + err.message);
+        return "";
     }
-    
-    return url;
 }
 
 function CopyToClipboard(element) {
@@ -434,57 +392,9 @@ function CopyToClipboard(element) {
   $temp.remove();
 }
 
- function makeUrlId(rawUrl,callback) {
-     var longUrl=rawUrl;
-
-     $.ajax({
-          type: 'POST',
-          contentType: 'application/json',
-          url: "https://api-ssl.bitly.com/v4/shorten",
-          data: JSON.stringify({
-            "long_url": longUrl
-        }),
-          headers: {
-            'Authorization': BitlyKey,
-            'Content-Type':'application/json'
-        },
-          error: function(e) {
-            callback(encodeUrl(longUrl));
-          },
-          dataType: 'json',
-          success: function(response) {
-            var UrlID ="";
-            if(response.id != null)
-            {
-                //response.id:  https://goo.gl/bMOO
-                UrlID = response.id.split("/");
-                UrlID = UrlID[UrlID.length-1];  //UrlID: bMOO
-                
-            }
-            callback("BL_"+UrlID);
-        	}
-        });  
- }
-
-function getUrlID(urlID,callback) {
-    $.ajax({
-        url: "https://api-ssl.bitly.com/v4/expand",
-        type: 'POST',
-        dataType: 'json',
-        data:JSON.stringify({
-            "bitlink_id": "bit.ly/"+urlID
-        }),
-        headers: {
-            'Authorization': BitlyKey
-        },
-        contentType: 'application/json',
-        success: function (result) {
-            callback(result.long_url);
-        },
-        error: function (error) {
-            
-        }
-    });
+// The Bitly / goo.gl shorteners needed secret tokens in browser code, so static links now carry the folder itself.
+function makeUrlId(rawUrl, callback) {
+    callback(encodeUrl(rawUrl));
 }
 
 function decodeUrlID(rawUrl, callback) {
@@ -513,19 +423,9 @@ function decodeUrlID(rawUrl, callback) {
         //console.log(linkID)
         
         if (linkID.length === 6) {
-            d3.json("https://www.googleapis.com/urlshortener/v1/url?key="+ Gkey+"&shortUrl=http://goo.gl/"+linkID, 
-                function(d){
-                    var GID = (getUrlVars(d.longUrl).ID);
-                    serverFolderLink = decodeUrl(GID);
-                    callback(serverFolderLink);
-                }
-            )
-        }else if(linkID.startsWith("BL_")){
-            getUrlID(linkID.replace("BL_",""), function (d) {
-                var GID = (getUrlVars(d).ID);
-                serverFolderLink = decodeUrl(GID);
-                callback(serverFolderLink);
-            })
+            alert("This short link used the discontinued goo.gl service and can no longer be opened.\nPlease use a link with ?GFOLDER=<Google Drive folder ID>.");
+        } else if (linkID.startsWith("BL_")) {
+            alert("Bitly short links are no longer resolved by this page.\nPlease use the full link or ?GFOLDER=<Google Drive folder ID>.");
         } else {
             serverFolderLink = decodeUrl(linkID);
             callback(serverFolderLink);
