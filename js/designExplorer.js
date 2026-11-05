@@ -213,7 +213,7 @@ function checkInputLink(link, callback) {
  * Drive folders are read through a Google Apps Script web app (see drive-proxy.gs):
  *   GET <proxy>?folderId=ID  ->  { files: [ { name, mimeType, url } ] }
  */
-var GOOGLE_DRIVE_PROXY = "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
+var GOOGLE_DRIVE_PROXY = "https://script.google.com/macros/s/AKfycbwDQOh-ZkLSufnw40yVdVul_q-TgD04BL4hpWEd4gaYHptGiyEgao4z_JzEMhlYNFyP/exec";
 
 function wait(ms) {
     return new Promise(function (resolve) { setTimeout(resolve, ms); });
