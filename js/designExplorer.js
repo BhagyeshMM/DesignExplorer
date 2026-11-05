@@ -208,8 +208,6 @@ function checkInputLink(link, callback) {
 
     callback(folderLinkObj);
 }
-var Gkey = "AIzaSyCSrF08UMawxKIb0m4JsA1mYE5NMmP36bY";
-var BitlyKey = "52e99e2d788d32ae8ea99007d96917ac4ba50a5a";
 var GOOGLE_DRIVE_PROXY = "https://script.google.com/macros/s/AKfycbxEruF0sKiO2G1l4VeKf2CGpfruiTg6JapvNdShx2qF0zt4UyoZeld1wBD08CuORsbl/exec";
 
 function prepareGFolder(folderLink) {
