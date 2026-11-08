@@ -422,8 +422,10 @@ function CopyToClipboard(element) {
 }
 
 // The Bitly / goo.gl shorteners needed secret tokens in browser code, so static links now carry the folder itself.
+// rawUrl is  <site>/DesignExplorer/?ID=<encoded folder link>  - the study id is just that encoded folder link.
 function makeUrlId(rawUrl, callback) {
-    callback(encodeUrl(rawUrl));
+    var m = String(rawUrl).match(/[?&]ID=([^&#]+)/);
+    callback(m ? m[1] : encodeUrl(rawUrl));
 }
 
 function decodeUrlID(rawUrl, callback) {
@@ -457,6 +459,12 @@ function decodeUrlID(rawUrl, callback) {
             alert("Bitly short links are no longer resolved by this page.\nPlease use the full link or ?GFOLDER=<Google Drive folder ID>.");
         } else {
             serverFolderLink = decodeUrl(linkID);
+            // links made by an earlier version contain a whole study link; unwrap it down to the folder link
+            for (var guard = 0; guard < 3; guard++) {
+                var inner = serverFolderLink.match(/[?&]ID=([^&#]+)/);
+                if (!inner) { break; }
+                serverFolderLink = decodeUrl(inner[1]);
+            }
             callback(serverFolderLink);
         }
         
