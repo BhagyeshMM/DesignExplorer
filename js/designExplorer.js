@@ -428,6 +428,17 @@ function makeUrlId(rawUrl, callback) {
     callback(m ? m[1] : encodeUrl(rawUrl));
 }
 
+// reads ?key=value pairs from a url; keys are upper-cased (ID, GFOLDER), as decodeUrlID expects.
+// (defined here because the page does not provide it; an existing definition elsewhere is kept)
+var getUrlVars = window.getUrlVars || function (url) {
+    var vars = {};
+    String(url || window.location.href).split("#")[0].replace(/[?&]+([^=&]+)=([^&]*)/g, function (m, key, value) {
+        vars[key.toUpperCase()] = value;
+        return m;
+    });
+    return vars;
+};
+
 function decodeUrlID(rawUrl, callback) {
     var serverFolderLink="";
     var urlVars = getUrlVars(rawUrl);
